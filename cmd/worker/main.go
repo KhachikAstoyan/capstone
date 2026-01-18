@@ -1,7 +1,19 @@
 package main
 
-import "fmt"
+import (
+	"log"
+
+	_ "github.com/lib/pq"
+
+	"github.com/KhachikAstoyan/capstone/internal/worker"
+)
 
 func main() {
-	fmt.Println("Hello from worker")
+	// Load configuration
+	cfg, err := worker.LoadConfig()
+	if err != nil {
+		log.Fatalf("Failed to load config: %v", err)
+	}
+
+	log.Printf("Starting worker in %s environment", cfg.Environment)
 }
