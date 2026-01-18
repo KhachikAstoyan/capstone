@@ -37,11 +37,9 @@ help:
 	@printf "  build-worker       Build worker binary\n"
 	@printf "  clean              Remove build artifacts\n"
 	@printf "  test               Run Go tests\n"
-	@printf "  lint               Run golangci-lint\n"
 	@printf "  fmt                Format Go code\n"
 	@printf "  tidy               Go mod tidy\n"
 	@printf "  deps               Download dependencies\n"
-	@printf "  ci                 Run CI checks (fmt, lint, test)\n"
 
 .PHONY: all
 all: clean deps build
@@ -80,11 +78,6 @@ test:
 	@printf "$(OK_COLOR)==> Running tests$(NO_COLOR)\n"
 	@$(GO) test $(GOFLAGS) ./...
 
-.PHONY: lint
-lint:
-	@printf "$(OK_COLOR)==> Running golangci-lint$(NO_COLOR)\n"
-	@golangci-lint run ./...
-
 .PHONY: fmt
 fmt:
 	@printf "$(OK_COLOR)==> Formatting code$(NO_COLOR)\n"
@@ -94,7 +87,3 @@ fmt:
 tidy:
 	@printf "$(OK_COLOR)==> Tidying dependencies$(NO_COLOR)\n"
 	@$(GO) mod tidy
-
-.PHONY: ci
-ci: fmt lint test
-	@printf "$(OK_COLOR)✅ All CI checks passed$(NO_COLOR)\n"
