@@ -12,7 +12,7 @@ GOFLAGS ?=
 CGO_ENABLED ?= 0
 
 # Build settings
-BUILD_DIR := build
+BUILD_DIR := ./build
 
 # Version info
 TIMESTAMP := $(shell date +"%Y%m%d.%H%M")
@@ -32,7 +32,7 @@ WORKER_BINARY_SRC := ./cmd/worker
 .PHONY: help
 help:
 	@printf "$(OK_COLOR)Available targets:$(NO_COLOR)\n"
-	@printf "  build              Build both api and worker\n"
+	@printf "  build-all          Build both api and worker\n"
 	@printf "  build-api          Build api binary\n"
 	@printf "  build-worker       Build worker binary\n"
 	@printf "  clean              Remove build artifacts\n"
@@ -42,7 +42,7 @@ help:
 	@printf "  deps               Download dependencies\n"
 
 .PHONY: all
-all: clean deps build
+all: clean deps build-all
 
 $(BUILD_DIR):
 	@mkdir -p $(BUILD_DIR)
@@ -52,17 +52,22 @@ deps:
 	@printf "$(OK_COLOR)==> Installing dependencies$(NO_COLOR)\n"
 	@$(GO) mod download
 
-.PHONY: build
-build: build-api build-worker
+.PHONY: build-all
+build-all: build-api build-worker
 
 .PHONY: build-api
-build-api: $(BUILD_DIR)
+build-api: | $(BUILD_DIR)
 	@printf "$(OK_COLOR)==> Building API binary$(NO_COLOR)\n"
 	@CGO_ENABLED=$(CGO_ENABLED) $(GO) build $(GOFLAGS) -trimpath $(GO_LINKER_FLAGS) -o $(BUILD_DIR)/$(API_BINARY) $(API_BINARY_SRC)
 	@printf "$(OK_COLOR)✅ API binary built: $(BUILD_DIR)/$(API_BINARY)$(NO_COLOR)\n"
 
+.PHONY: run-api
+run-api:
+	@printf "$(OK_COLOR)==> Running API binary$(NO_COLOR)\n"
+	@$(GO) run $(API_BINARY_SRC)
+
 .PHONY: build-worker
-build-worker: $(BUILD_DIR)
+build-worker: | $(BUILD_DIR)
 	@printf "$(OK_COLOR)==> Building Worker binary$(NO_COLOR)\n"
 	@CGO_ENABLED=$(CGO_ENABLED) $(GO) build $(GOFLAGS) -trimpath $(GO_LINKER_FLAGS) -o $(BUILD_DIR)/$(WORKER_BINARY) $(WORKER_BINARY_SRC)
 	@printf "$(OK_COLOR)✅ Worker binary built: $(BUILD_DIR)/$(WORKER_BINARY)$(NO_COLOR)\n"
