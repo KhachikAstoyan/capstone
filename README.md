@@ -2,6 +2,10 @@
 
 My capstone project for the American University of Armenia
 
+This project focuses on the design and implementation of a secure, low-latency online platform for executing and evaluating untrusted user code. The system will provide a complete programming environment with authentication, problem management, submission tracking, and leaderboards. At its core, it will include a hardened execution layer that runs user code inside strongly isolated environments to prevent system compromise and enforce strict resource limits.
+
+In addition to secure execution, the platform will offer transparent reporting of runtime behavior and sandbox violations, dynamically calibrate problem difficulty based on real submission data, and integrate AI-assisted feedback to support users who are struggling. The project combines systems security, distributed architecture, and applied AI to build a scalable and observable code evaluation platform.
+
 ## Project Structure
 
 ```
@@ -52,10 +56,14 @@ API_PORT=8080
 API_HOST=0.0.0.0
 API_ALLOWED_ORIGINS=*
 
-# API Database
+# API Database (REQUIRED)
 API_DATABASE_URL=postgres://postgres:postgres@localhost:5432/api?sslmode=disable
+
+# API Migrations (optional)
 API_MIGRATIONS_PATH=./internal/api/migrations
 ```
+
+**Note:** `API_DATABASE_URL` is **required**. The application will fail to start without it.
 
 #### Worker Configuration
 
