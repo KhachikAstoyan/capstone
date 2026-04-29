@@ -1,0 +1,5 @@
+BEGIN;
+
+ALTER TABLE problems DROP COLUMN IF EXISTS summary;
+
+COMMIT;

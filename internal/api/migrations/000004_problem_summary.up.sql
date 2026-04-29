@@ -1,0 +1,6 @@
+BEGIN;
+
+ALTER TABLE problems
+  ADD COLUMN summary TEXT NOT NULL DEFAULT '';
+
+COMMIT;

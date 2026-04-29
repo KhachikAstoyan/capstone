@@ -1,0 +1,2 @@
+ALTER TABLE problem_test_cases
+    ADD COLUMN is_hidden BOOLEAN NOT NULL DEFAULT FALSE;

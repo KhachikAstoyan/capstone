@@ -24,6 +24,7 @@ var CorePermissions = []struct {
 	{permissions.RBACUsersManage, "Assign and remove roles from users"},
 	{permissions.AdminAccess, "Access admin dashboard"},
 	{permissions.ProblemsManage, "Create, update, delete problems"},
+	{permissions.SubmissionsViewAll, "View any user's submissions"},
 }
 
 // CoreRoles defines the core roles for the system
@@ -44,6 +45,7 @@ var CoreRoles = []struct {
 			permissions.RBACUsersManage,
 			permissions.AdminAccess,
 			permissions.ProblemsManage,
+			permissions.SubmissionsViewAll,
 		},
 	},
 	{

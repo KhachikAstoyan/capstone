@@ -17,6 +17,9 @@ import (
 	authhttp "github.com/KhachikAstoyan/capstone/internal/api/auth/http"
 	authrepo "github.com/KhachikAstoyan/capstone/internal/api/auth/repository"
 	authservice "github.com/KhachikAstoyan/capstone/internal/api/auth/service"
+	languageshttp "github.com/KhachikAstoyan/capstone/internal/api/languages/http"
+	languagesrepo "github.com/KhachikAstoyan/capstone/internal/api/languages/repository"
+	languagesservice "github.com/KhachikAstoyan/capstone/internal/api/languages/service"
 	problemshttp "github.com/KhachikAstoyan/capstone/internal/api/problems/http"
 	problemsrepo "github.com/KhachikAstoyan/capstone/internal/api/problems/repository"
 	problemsservice "github.com/KhachikAstoyan/capstone/internal/api/problems/service"
@@ -24,9 +27,17 @@ import (
 	rbachttp "github.com/KhachikAstoyan/capstone/internal/api/rbac/http"
 	rbacrepo "github.com/KhachikAstoyan/capstone/internal/api/rbac/repository"
 	rbacservice "github.com/KhachikAstoyan/capstone/internal/api/rbac/service"
+	submissionsclient "github.com/KhachikAstoyan/capstone/internal/api/submissions/client"
+	submissionshttp "github.com/KhachikAstoyan/capstone/internal/api/submissions/http"
+	submissionsrepo "github.com/KhachikAstoyan/capstone/internal/api/submissions/repository"
+	submissionsservice "github.com/KhachikAstoyan/capstone/internal/api/submissions/service"
+	tagshttp "github.com/KhachikAstoyan/capstone/internal/api/tags/http"
+	tagsrepo "github.com/KhachikAstoyan/capstone/internal/api/tags/repository"
+	tagsservice "github.com/KhachikAstoyan/capstone/internal/api/tags/service"
 	"github.com/KhachikAstoyan/capstone/pkg/database"
 	"github.com/KhachikAstoyan/capstone/pkg/logger"
 	"github.com/KhachikAstoyan/capstone/pkg/migrations"
+	"github.com/KhachikAstoyan/capstone/pkg/rabbitmq"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
@@ -90,6 +101,7 @@ func main() {
 	userRepo := authrepo.NewUserRepository(db)
 	identityRepo := authrepo.NewAuthIdentityRepository(db)
 	refreshTokenRepo := authrepo.NewRefreshTokenRepository(db)
+	emailVerificationRepo := authrepo.NewEmailVerificationRepository(db)
 
 	// RBAC repositories
 	roleRepo := rbacrepo.NewRoleRepository(db)
@@ -98,11 +110,33 @@ func main() {
 
 	// Problems repositories
 	problemsRepo := problemsrepo.NewRepository(db)
+	tagsRepo := tagsrepo.New(db)
+	languagesRepo := languagesrepo.New(db)
 
 	// Services
 	rbacService := rbacservice.NewService(roleRepo, permRepo, userRoleRepo)
-	authService := authservice.NewService(userRepo, identityRepo, refreshTokenRepo, jwtManager, rbacService)
+
+	emailVerificationPub := rabbitmq.NewNoopEmailVerificationPublisher()
+	if cfg.RabbitMQURL != "" {
+		pub, err := rabbitmq.NewPublisher(cfg.RabbitMQURL, cfg.RabbitMQExchange)
+		if err != nil {
+			log.Fatal("Failed to connect to RabbitMQ", zap.Error(err))
+		}
+		defer func() {
+			if err := pub.Close(); err != nil {
+				log.Error("RabbitMQ publisher close", zap.Error(err))
+			}
+		}()
+		emailVerificationPub = rabbitmq.NewEmailVerificationPublisher(pub, cfg.RabbitMQEmailVerificationRoutingKey)
+		log.Info("RabbitMQ publisher ready",
+			zap.String("exchange", cfg.RabbitMQExchange),
+			zap.String("email_verification_routing_key", cfg.RabbitMQEmailVerificationRoutingKey))
+	}
+
+	authService := authservice.NewService(userRepo, identityRepo, refreshTokenRepo, emailVerificationRepo, jwtManager, rbacService, cfg.FrontendURL, emailVerificationPub)
 	problemsService := problemsservice.NewService(problemsRepo)
+	tagsService := tagsservice.New(tagsRepo)
+	languagesService := languagesservice.New(languagesRepo)
 
 	// Managers
 	rbacManager := rbac.NewManager(rbacService)
@@ -111,11 +145,18 @@ func main() {
 	authHandler := authhttp.NewHandler(authService, cfg.SecureCookies)
 	rbacHandler := rbachttp.NewHandler(rbacService)
 	problemsHandler := problemshttp.NewHandler(problemsService)
+	tagsHandler := tagshttp.NewHandler(tagsService, problemsService)
+	languagesHandler := languageshttp.NewHandler(languagesService, problemsService)
 
-	handler := setupRoutes(authHandler, rbacHandler, problemsHandler, jwtManager, rbacManager)
+	cpClient := submissionsclient.NewCPClient(cfg.ControlPlaneURL, cfg.ControlPlaneKey)
+	submissionsRepo := submissionsrepo.NewRepository(db)
+	submissionsService := submissionsservice.NewService(submissionsRepo, cpClient, problemsRepo)
+	submissionsHandler := submissionshttp.NewHandler(submissionsService, rbacManager)
+
+	handler := setupRoutes(authHandler, rbacHandler, problemsHandler, tagsHandler, languagesHandler, submissionsHandler, jwtManager, rbacManager)
 
 	r := chi.NewRouter()
-	
+
 	// CORS middleware
 	allowedOrigins := []string{"*"}
 	if cfg.AllowedOrigins != "" && cfg.AllowedOrigins != "*" {
@@ -125,7 +166,7 @@ func main() {
 			allowedOrigins[i] = strings.TrimSpace(allowedOrigins[i])
 		}
 	}
-	
+
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   allowedOrigins,
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
@@ -134,7 +175,7 @@ func main() {
 		AllowCredentials: true,
 		MaxAge:           300,
 	}))
-	
+
 	r.Use(middleware.RequestID)
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)

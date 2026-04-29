@@ -13,20 +13,23 @@ import (
 	"github.com/KhachikAstoyan/capstone/internal/api/auth/domain"
 	"github.com/KhachikAstoyan/capstone/internal/api/auth/repository"
 	"github.com/KhachikAstoyan/capstone/internal/api/auth/service"
+	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 type mockService struct {
-	RegisterFunc    func(ctx context.Context, req service.RegisterRequest) (*service.AuthResponse, error)
-	LoginFunc       func(ctx context.Context, req service.LoginRequest) (*service.AuthResponse, error)
+	RegisterFunc     func(ctx context.Context, req service.RegisterRequest) (*service.RegisterResponse, error)
+	LoginFunc        func(ctx context.Context, req service.LoginRequest) (*service.AuthResponse, error)
 	RefreshTokenFunc func(ctx context.Context, refreshToken string) (*service.AuthResponse, error)
-	LogoutFunc      func(ctx context.Context, refreshToken string) error
-	GetUserByIDFunc func(ctx context.Context, userID uuid.UUID) (*domain.User, error)
+	LogoutFunc       func(ctx context.Context, refreshToken string) error
+	VerifyEmailFunc func(ctx context.Context, token string) (service.VerifyEmailOutcome, error)
+	GetUserByIDFunc        func(ctx context.Context, userID uuid.UUID) (*domain.User, error)
+	GetPublicProfileFunc   func(ctx context.Context, userRef string) (*domain.PublicUserProfile, error)
 }
 
-func (m *mockService) Register(ctx context.Context, req service.RegisterRequest) (*service.AuthResponse, error) {
+func (m *mockService) Register(ctx context.Context, req service.RegisterRequest) (*service.RegisterResponse, error) {
 	if m.RegisterFunc != nil {
 		return m.RegisterFunc(ctx, req)
 	}
@@ -54,6 +57,13 @@ func (m *mockService) Logout(ctx context.Context, refreshToken string) error {
 	return errors.New("not implemented")
 }
 
+func (m *mockService) VerifyEmail(ctx context.Context, token string) (service.VerifyEmailOutcome, error) {
+	if m.VerifyEmailFunc != nil {
+		return m.VerifyEmailFunc(ctx, token)
+	}
+	return "", errors.New("not implemented")
+}
+
 func (m *mockService) GetUserByID(ctx context.Context, userID uuid.UUID) (*domain.User, error) {
 	if m.GetUserByIDFunc != nil {
 		return m.GetUserByIDFunc(ctx, userID)
@@ -61,23 +71,21 @@ func (m *mockService) GetUserByID(ctx context.Context, userID uuid.UUID) (*domai
 	return nil, errors.New("not implemented")
 }
 
+func (m *mockService) GetPublicProfile(ctx context.Context, userRef string) (*domain.PublicUserProfile, error) {
+	if m.GetPublicProfileFunc != nil {
+		return m.GetPublicProfileFunc(ctx, userRef)
+	}
+	return nil, errors.New("not implemented")
+}
+
 func TestRegister_Success(t *testing.T) {
 	mockSvc := &mockService{
-		RegisterFunc: func(ctx context.Context, req service.RegisterRequest) (*service.AuthResponse, error) {
-			return &service.AuthResponse{
-				AccessToken:  "access-token",
-				RefreshToken: "refresh-token",
-				ExpiresIn:    3600,
-				User: &domain.User{
-					ID:     uuid.New(),
-					Handle: req.Handle,
-					Email:  &req.Email,
-				},
-			}, nil
+		RegisterFunc: func(ctx context.Context, req service.RegisterRequest) (*service.RegisterResponse, error) {
+			return &service.RegisterResponse{Message: "ok"}, nil
 		},
 	}
 
-	handler := NewHandler(mockSvc)
+	handler := NewHandler(mockSvc, false)
 
 	reqBody := RegisterRequestDTO{
 		Handle:   "testuser",
@@ -94,16 +102,14 @@ func TestRegister_Success(t *testing.T) {
 
 	assert.Equal(t, http.StatusCreated, w.Code)
 
-	var resp service.AuthResponse
+	var resp service.RegisterResponse
 	err := json.NewDecoder(w.Body).Decode(&resp)
 	require.NoError(t, err)
-	assert.Equal(t, "access-token", resp.AccessToken)
-	assert.Equal(t, "refresh-token", resp.RefreshToken)
-	assert.Equal(t, "testuser", resp.User.Handle)
+	assert.Equal(t, "ok", resp.Message)
 }
 
 func TestRegister_MissingFields(t *testing.T) {
-	handler := NewHandler(&mockService{})
+	handler := NewHandler(&mockService{}, false)
 
 	tests := []struct {
 		name string
@@ -148,12 +154,12 @@ func TestRegister_MissingFields(t *testing.T) {
 
 func TestRegister_UserAlreadyExists(t *testing.T) {
 	mockSvc := &mockService{
-		RegisterFunc: func(ctx context.Context, req service.RegisterRequest) (*service.AuthResponse, error) {
+		RegisterFunc: func(ctx context.Context, req service.RegisterRequest) (*service.RegisterResponse, error) {
 			return nil, repository.ErrUserAlreadyExists
 		},
 	}
 
-	handler := NewHandler(mockSvc)
+	handler := NewHandler(mockSvc, false)
 
 	reqBody := RegisterRequestDTO{
 		Handle:   "testuser",
@@ -173,12 +179,12 @@ func TestRegister_UserAlreadyExists(t *testing.T) {
 
 func TestRegister_PasswordTooShort(t *testing.T) {
 	mockSvc := &mockService{
-		RegisterFunc: func(ctx context.Context, req service.RegisterRequest) (*service.AuthResponse, error) {
+		RegisterFunc: func(ctx context.Context, req service.RegisterRequest) (*service.RegisterResponse, error) {
 			return nil, auth.ErrPasswordTooShort
 		},
 	}
 
-	handler := NewHandler(mockSvc)
+	handler := NewHandler(mockSvc, false)
 
 	reqBody := RegisterRequestDTO{
 		Handle:   "testuser",
@@ -212,7 +218,7 @@ func TestLogin_Success(t *testing.T) {
 		},
 	}
 
-	handler := NewHandler(mockSvc)
+	handler := NewHandler(mockSvc, false)
 
 	reqBody := LoginRequestDTO{
 		Email:    "test@example.com",
@@ -241,7 +247,7 @@ func TestLogin_InvalidCredentials(t *testing.T) {
 		},
 	}
 
-	handler := NewHandler(mockSvc)
+	handler := NewHandler(mockSvc, false)
 
 	reqBody := LoginRequestDTO{
 		Email:    "test@example.com",
@@ -265,7 +271,31 @@ func TestLogin_UserBanned(t *testing.T) {
 		},
 	}
 
-	handler := NewHandler(mockSvc)
+	handler := NewHandler(mockSvc, false)
+
+	reqBody := LoginRequestDTO{
+		Email:    "test@example.com",
+		Password: "password123",
+	}
+	body, _ := json.Marshal(reqBody)
+
+	req := httptest.NewRequest(http.MethodPost, "/auth/login", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	handler.Login(w, req)
+
+	assert.Equal(t, http.StatusForbidden, w.Code)
+}
+
+func TestLogin_EmailNotVerified(t *testing.T) {
+	mockSvc := &mockService{
+		LoginFunc: func(ctx context.Context, req service.LoginRequest) (*service.AuthResponse, error) {
+			return nil, service.ErrEmailNotVerified
+		},
+	}
+
+	handler := NewHandler(mockSvc, false)
 
 	reqBody := LoginRequestDTO{
 		Email:    "test@example.com",
@@ -297,15 +327,13 @@ func TestRefreshToken_Success(t *testing.T) {
 		},
 	}
 
-	handler := NewHandler(mockSvc)
+	handler := NewHandler(mockSvc, false)
 
-	reqBody := RefreshTokenRequestDTO{
-		RefreshToken: "old-refresh-token",
-	}
-	body, _ := json.Marshal(reqBody)
-
-	req := httptest.NewRequest(http.MethodPost, "/auth/refresh", bytes.NewReader(body))
-	req.Header.Set("Content-Type", "application/json")
+	req := httptest.NewRequest(http.MethodPost, "/auth/refresh", nil)
+	req.AddCookie(&http.Cookie{
+		Name:  "refresh_token",
+		Value: "old-refresh-token",
+	})
 	w := httptest.NewRecorder()
 
 	handler.RefreshToken(w, req)
@@ -326,20 +354,39 @@ func TestRefreshToken_Invalid(t *testing.T) {
 		},
 	}
 
-	handler := NewHandler(mockSvc)
+	handler := NewHandler(mockSvc, false)
 
-	reqBody := RefreshTokenRequestDTO{
-		RefreshToken: "invalid-token",
-	}
-	body, _ := json.Marshal(reqBody)
-
-	req := httptest.NewRequest(http.MethodPost, "/auth/refresh", bytes.NewReader(body))
-	req.Header.Set("Content-Type", "application/json")
+	req := httptest.NewRequest(http.MethodPost, "/auth/refresh", nil)
+	req.AddCookie(&http.Cookie{
+		Name:  "refresh_token",
+		Value: "invalid-token",
+	})
 	w := httptest.NewRecorder()
 
 	handler.RefreshToken(w, req)
 
 	assert.Equal(t, http.StatusUnauthorized, w.Code)
+}
+
+func TestRefreshToken_EmailNotVerified(t *testing.T) {
+	mockSvc := &mockService{
+		RefreshTokenFunc: func(ctx context.Context, refreshToken string) (*service.AuthResponse, error) {
+			return nil, service.ErrEmailNotVerified
+		},
+	}
+
+	handler := NewHandler(mockSvc, false)
+
+	req := httptest.NewRequest(http.MethodPost, "/auth/refresh", nil)
+	req.AddCookie(&http.Cookie{
+		Name:  "refresh_token",
+		Value: "refresh-token",
+	})
+	w := httptest.NewRecorder()
+
+	handler.RefreshToken(w, req)
+
+	assert.Equal(t, http.StatusForbidden, w.Code)
 }
 
 func TestLogout_Success(t *testing.T) {
@@ -349,15 +396,13 @@ func TestLogout_Success(t *testing.T) {
 		},
 	}
 
-	handler := NewHandler(mockSvc)
+	handler := NewHandler(mockSvc, false)
 
-	reqBody := LogoutRequestDTO{
-		RefreshToken: "refresh-token",
-	}
-	body, _ := json.Marshal(reqBody)
-
-	req := httptest.NewRequest(http.MethodPost, "/auth/logout", bytes.NewReader(body))
-	req.Header.Set("Content-Type", "application/json")
+	req := httptest.NewRequest(http.MethodPost, "/auth/logout", nil)
+	req.AddCookie(&http.Cookie{
+		Name:  "refresh_token",
+		Value: "refresh-token",
+	})
 	w := httptest.NewRecorder()
 
 	handler.Logout(w, req)
@@ -378,7 +423,7 @@ func TestGetCurrentUser_Success(t *testing.T) {
 		},
 	}
 
-	handler := NewHandler(mockSvc)
+	handler := NewHandler(mockSvc, false)
 
 	req := httptest.NewRequest(http.MethodGet, "/auth/me", nil)
 	ctx := context.WithValue(req.Context(), UserIDKey, userID)
@@ -397,7 +442,7 @@ func TestGetCurrentUser_Success(t *testing.T) {
 }
 
 func TestGetCurrentUser_NotAuthenticated(t *testing.T) {
-	handler := NewHandler(&mockService{})
+	handler := NewHandler(&mockService{}, false)
 
 	req := httptest.NewRequest(http.MethodGet, "/auth/me", nil)
 	w := httptest.NewRecorder()
@@ -415,7 +460,7 @@ func TestGetCurrentUser_UserNotFound(t *testing.T) {
 		},
 	}
 
-	handler := NewHandler(mockSvc)
+	handler := NewHandler(mockSvc, false)
 
 	req := httptest.NewRequest(http.MethodGet, "/auth/me", nil)
 	ctx := context.WithValue(req.Context(), UserIDKey, userID)
@@ -423,6 +468,46 @@ func TestGetCurrentUser_UserNotFound(t *testing.T) {
 	w := httptest.NewRecorder()
 
 	handler.GetCurrentUser(w, req)
+
+	assert.Equal(t, http.StatusNotFound, w.Code)
+}
+
+func TestGetPublicUserProfile_ByHandle(t *testing.T) {
+	mockSvc := &mockService{
+		GetPublicProfileFunc: func(ctx context.Context, userRef string) (*domain.PublicUserProfile, error) {
+			assert.Equal(t, "johndoe", userRef)
+			return &domain.PublicUserProfile{
+				ID:     uuid.New(),
+				Handle: "johndoe",
+			}, nil
+		},
+	}
+
+	handler := NewHandler(mockSvc, false)
+	r := chi.NewRouter()
+	r.Get("/users/{userRef}", handler.GetPublicUserProfile)
+
+	req := httptest.NewRequest(http.MethodGet, "/users/johndoe", nil)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+}
+
+func TestGetPublicUserProfile_NotFound(t *testing.T) {
+	mockSvc := &mockService{
+		GetPublicProfileFunc: func(ctx context.Context, userRef string) (*domain.PublicUserProfile, error) {
+			return nil, repository.ErrUserNotFound
+		},
+	}
+
+	handler := NewHandler(mockSvc, false)
+	r := chi.NewRouter()
+	r.Get("/users/{userRef}", handler.GetPublicUserProfile)
+
+	req := httptest.NewRequest(http.MethodGet, "/users/nobody", nil)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusNotFound, w.Code)
 }

@@ -84,6 +84,11 @@ func GenerateRefreshToken() (string, error) {
 	return base64.URLEncoding.EncodeToString(b), nil
 }
 
+// GenerateEmailVerificationToken returns a high-entropy secret for one-time email verification links.
+func GenerateEmailVerificationToken() (string, error) {
+	return GenerateRefreshToken()
+}
+
 func (m *JWTManager) GetRefreshTokenDuration() time.Duration {
 	return m.refreshTokenDuration
 }

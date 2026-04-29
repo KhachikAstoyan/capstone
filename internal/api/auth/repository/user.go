@@ -20,6 +20,7 @@ type UserRepository interface {
 	GetUserByID(ctx context.Context, id uuid.UUID) (*domain.User, error)
 	GetUserByHandle(ctx context.Context, handle string) (*domain.User, error)
 	GetUserByEmail(ctx context.Context, email string) (*domain.User, error)
+	ListSolvedProblems(ctx context.Context, userID uuid.UUID) ([]domain.PublicSolvedProblem, error)
 	UpdateUser(ctx context.Context, user *domain.User) error
 }
 
@@ -87,7 +88,7 @@ func (r *userRepository) GetUserByHandle(ctx context.Context, handle string) (*d
 	query := `
 		SELECT id, handle, email, email_verified, display_name, avatar_url, status, created_at, updated_at
 		FROM users
-		WHERE handle = $1
+		WHERE LOWER(handle::text) = LOWER($1)
 	`
 	user := &domain.User{}
 	err := r.db.QueryRowContext(ctx, query, handle).Scan(
@@ -137,6 +138,72 @@ func (r *userRepository) GetUserByEmail(ctx context.Context, email string) (*dom
 	return user, nil
 }
 
+func (r *userRepository) ListSolvedProblems(ctx context.Context, userID uuid.UUID) ([]domain.PublicSolvedProblem, error) {
+	query := `
+		WITH latest_accepted AS (
+			SELECT DISTINCT ON (s.problem_id)
+				p.id AS problem_id,
+				p.slug,
+				p.title,
+				p.summary,
+				p.difficulty::text,
+				s.id AS submission_id,
+				s.language_id,
+				l.key AS language_key,
+				l.display_name AS language_display_name,
+				s.source_text,
+				s.status::text,
+				s.created_at
+			FROM submissions s
+			JOIN problems p ON p.id = s.problem_id
+			JOIN languages l ON l.id = s.language_id
+			WHERE s.user_id = $1
+			  AND s.kind = 'submit'
+			  AND s.status = 'accepted'
+			  AND p.visibility = 'published'
+			ORDER BY s.problem_id, s.created_at DESC
+		)
+		SELECT problem_id, slug, title, summary, difficulty,
+		       submission_id, language_id, language_key, language_display_name,
+		       source_text, status, created_at
+		FROM latest_accepted
+		ORDER BY created_at DESC
+	`
+
+	rows, err := r.db.QueryContext(ctx, query, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list solved problems: %w", err)
+	}
+	defer rows.Close()
+
+	var solved []domain.PublicSolvedProblem
+	for rows.Next() {
+		var item domain.PublicSolvedProblem
+		if err := rows.Scan(
+			&item.ID,
+			&item.Slug,
+			&item.Title,
+			&item.Summary,
+			&item.Difficulty,
+			&item.Solution.ID,
+			&item.Solution.LanguageID,
+			&item.Solution.LanguageKey,
+			&item.Solution.LanguageDisplayName,
+			&item.Solution.SourceText,
+			&item.Solution.Status,
+			&item.Solution.CreatedAt,
+		); err != nil {
+			return nil, fmt.Errorf("failed to scan solved problem: %w", err)
+		}
+		item.SolvedAt = item.Solution.CreatedAt
+		solved = append(solved, item)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating solved problems: %w", err)
+	}
+	return solved, nil
+}
+
 func (r *userRepository) UpdateUser(ctx context.Context, user *domain.User) error {
 	query := `
 		UPDATE users
@@ -157,7 +224,7 @@ func (r *userRepository) UpdateUser(ctx context.Context, user *domain.User) erro
 	if err != nil {
 		return fmt.Errorf("failed to update user: %w", err)
 	}
-	
+
 	rowsAffected, err := result.RowsAffected()
 	if err != nil {
 		return fmt.Errorf("failed to get rows affected: %w", err)
@@ -165,6 +232,6 @@ func (r *userRepository) UpdateUser(ctx context.Context, user *domain.User) erro
 	if rowsAffected == 0 {
 		return ErrUserNotFound
 	}
-	
+
 	return nil
 }

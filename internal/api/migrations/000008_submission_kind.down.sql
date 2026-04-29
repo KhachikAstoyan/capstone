@@ -1,0 +1,10 @@
+BEGIN;
+
+DROP INDEX IF EXISTS submissions_kind_idx;
+
+ALTER TABLE submissions
+    DROP COLUMN kind;
+
+DROP TYPE SUBMISSION_KIND;
+
+COMMIT;

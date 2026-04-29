@@ -122,6 +122,21 @@ CREATE INDEX IF NOT EXISTS refresh_tokens_expires_idx
   WHERE revoked_at IS NULL;
 
 -- =========================================================
+-- Email verification tokens (one-time links)
+-- =========================================================
+CREATE TABLE IF NOT EXISTS email_verification_tokens (
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+  user_id     UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+
+  token_hash  BYTEA NOT NULL,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS email_verification_tokens_token_hash_idx
+  ON email_verification_tokens (token_hash);
+
+-- =========================================================
 -- Languages
 -- =========================================================
 CREATE TABLE IF NOT EXISTS languages (
@@ -147,6 +162,7 @@ CREATE TABLE IF NOT EXISTS problems (
 
   slug               TEXT NOT NULL UNIQUE,
   title              TEXT NOT NULL,
+  summary            TEXT NOT NULL DEFAULT '',
   statement_markdown TEXT NOT NULL,
 
   time_limit_ms      INTEGER NOT NULL CHECK (time_limit_ms > 0),

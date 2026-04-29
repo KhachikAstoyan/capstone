@@ -1,0 +1,215 @@
+{
+  "examples": [
+    {
+      "problem": "Two Sum",
+      "description": "Given an array of integers and a target, return indices of the two numbers that add up to target.",
+      "function_spec": {
+        "function_name": "twoSum",
+        "parameters": [
+          { "name": "nums",   "type": "int[]" },
+          { "name": "target", "type": "int"   }
+        ],
+        "return_type": "int[]"
+      },
+      "test_cases": [
+        {
+          "input_data":    { "nums": [2, 7, 11, 15], "target": 9 },
+          "expected_data": [0, 1]
+        },
+        {
+          "input_data":    { "nums": [3, 2, 4], "target": 6 },
+          "expected_data": [1, 2]
+        },
+        {
+          "input_data":    { "nums": [3, 3], "target": 6 },
+          "expected_data": [0, 1]
+        }
+      ]
+    },
+
+    {
+      "problem": "Maximum Depth of Binary Tree",
+      "description": "Given the root of a binary tree, return its maximum depth.",
+      "function_spec": {
+        "function_name": "maxDepth",
+        "parameters": [
+          { "name": "root", "type": "TreeNode" }
+        ],
+        "return_type": "int"
+      },
+      "test_cases": [
+        {
+          "input_data":    { "root": [3, 9, 20, null, null, 15, 7] },
+          "expected_data": 3
+        },
+        {
+          "input_data":    { "root": [1, null, 2] },
+          "expected_data": 2
+        },
+        {
+          "input_data":    { "root": [] },
+          "expected_data": 0
+        }
+      ]
+    },
+
+    {
+      "problem": "Invert Binary Tree",
+      "description": "Given the root of a binary tree, invert it and return its root.",
+      "function_spec": {
+        "function_name": "invertTree",
+        "parameters": [
+          { "name": "root", "type": "TreeNode" }
+        ],
+        "return_type": "TreeNode"
+      },
+      "test_cases": [
+        {
+          "input_data":    { "root": [4, 2, 7, 1, 3, 6, 9] },
+          "expected_data": [4, 7, 2, 9, 6, 3, 1]
+        },
+        {
+          "input_data":    { "root": [2, 1, 3] },
+          "expected_data": [2, 3, 1]
+        },
+        {
+          "input_data":    { "root": [] },
+          "expected_data": []
+        }
+      ]
+    },
+
+    {
+      "problem": "Reverse Linked List",
+      "description": "Given the head of a singly linked list, reverse it and return the new head.",
+      "function_spec": {
+        "function_name": "reverseList",
+        "parameters": [
+          { "name": "head", "type": "ListNode" }
+        ],
+        "return_type": "ListNode"
+      },
+      "test_cases": [
+        {
+          "input_data":    { "head": [1, 2, 3, 4, 5] },
+          "expected_data": [5, 4, 3, 2, 1]
+        },
+        {
+          "input_data":    { "head": [1, 2] },
+          "expected_data": [2, 1]
+        },
+        {
+          "input_data":    { "head": [] },
+          "expected_data": []
+        }
+      ]
+    },
+
+    {
+      "problem": "Merge Two Sorted Lists",
+      "description": "Merge two sorted linked lists and return the merged list's head.",
+      "function_spec": {
+        "function_name": "mergeTwoLists",
+        "parameters": [
+          { "name": "list1", "type": "ListNode" },
+          { "name": "list2", "type": "ListNode" }
+        ],
+        "return_type": "ListNode"
+      },
+      "test_cases": [
+        {
+          "input_data":    { "list1": [1, 2, 4], "list2": [1, 3, 4] },
+          "expected_data": [1, 1, 2, 3, 4, 4]
+        },
+        {
+          "input_data":    { "list1": [], "list2": [] },
+          "expected_data": []
+        },
+        {
+          "input_data":    { "list1": [], "list2": [0] },
+          "expected_data": [0]
+        }
+      ]
+    },
+
+    {
+      "problem": "Climbing Stairs",
+      "description": "Given n steps, count the number of distinct ways to climb to the top (1 or 2 steps at a time).",
+      "function_spec": {
+        "function_name": "climbStairs",
+        "parameters": [
+          { "name": "n", "type": "int" }
+        ],
+        "return_type": "int"
+      },
+      "test_cases": [
+        {
+          "input_data":    { "n": 2 },
+          "expected_data": 2
+        },
+        {
+          "input_data":    { "n": 3 },
+          "expected_data": 3
+        },
+        {
+          "input_data":    { "n": 10 },
+          "expected_data": 89
+        }
+      ]
+    },
+
+    {
+      "problem": "Search a 2D Matrix",
+      "description": "Given an m×n integer matrix and a target, return true if the target is in the matrix.",
+      "function_spec": {
+        "function_name": "searchMatrix",
+        "parameters": [
+          { "name": "matrix", "type": "int[][]" },
+          { "name": "target", "type": "int"     }
+        ],
+        "return_type": "bool"
+      },
+      "test_cases": [
+        {
+          "input_data":    { "matrix": [[1,3,5,7],[10,11,16,20],[23,30,34,60]], "target": 3 },
+          "expected_data": true
+        },
+        {
+          "input_data":    { "matrix": [[1,3,5,7],[10,11,16,20],[23,30,34,60]], "target": 13 },
+          "expected_data": false
+        }
+      ]
+    },
+
+    {
+      "problem": "Valid Anagram",
+      "description": "Given two strings s and t, return true if t is an anagram of s.",
+      "function_spec": {
+        "function_name": "isAnagram",
+        "parameters": [
+          { "name": "s", "type": "string" },
+          { "name": "t", "type": "string" }
+        ],
+        "return_type": "bool"
+      },
+      "test_cases": [
+        {
+          "input_data":    { "s": "anagram", "t": "nagaram" },
+          "expected_data": true
+        },
+        {
+          "input_data":    { "s": "rat", "t": "car" },
+          "expected_data": false
+        }
+      ]
+    }
+  ],
+
+  "notes": {
+    "tree_format": "TreeNode values are BFS level-order arrays (LeetCode format). null means the node is absent. Example: [1,2,3,null,null,4,5] represents a tree where 1 is root, 2 is left child, 3 is right child, 4 and 5 are children of 3.",
+    "list_format": "ListNode values are flat integer arrays representing node values in order. Example: [1,2,3,4,5] is a list 1→2→3→4→5.",
+    "empty_structures": "An empty tree is [] (empty array). An empty list is [] (empty array).",
+    "scalar_expected": "When return_type is a scalar (int, bool, string, float), expected_data is the raw JSON value, not wrapped in an object.",
+    "array_expected": "When return_type is an array (int[], string[]), expected_data is a JSON array."
+  }
+}

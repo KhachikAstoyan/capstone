@@ -17,8 +17,23 @@ type Config struct {
 	AllowedOrigins string `envconfig:"API_ALLOWED_ORIGINS" default:"*"`
 	SecureCookies  bool   `envconfig:"API_SECURE_COOKIES" default:"false"`
 
+	// FrontendURL is the SPA origin (no trailing path). Used to build email verification links: {FrontendURL}?token=...
+	FrontendURL string `envconfig:"API_FRONTEND_URL" default:"http://localhost:5173"`
+
+	// RabbitMQURL enables publishing email verification events. If empty, publishing is a no-op.
+	RabbitMQURL string `envconfig:"API_RABBITMQ_URL"`
+	// RabbitMQExchange is the durable topic exchange used for app events (declared on connect).
+	RabbitMQExchange string `envconfig:"API_RABBITMQ_EXCHANGE" default:"capstone.events"`
+	// RabbitMQEmailVerificationRoutingKey is the routing key for verification messages.
+	RabbitMQEmailVerificationRoutingKey string `envconfig:"API_RABBITMQ_EMAIL_VERIFICATION_ROUTING_KEY" default:"email.verification"`
+
 	DatabaseURL    string `envconfig:"API_DATABASE_URL" required:"true"`
 	MigrationsPath string `envconfig:"API_MIGRATIONS_PATH" default:"./internal/api/migrations"`
+
+	// ControlPlaneURL is the base URL of the execution control plane service.
+	ControlPlaneURL string `envconfig:"API_CONTROL_PLANE_URL" required:"true"`
+	// ControlPlaneKey is the shared secret for X-Internal-Key auth. Empty = dev mode.
+	ControlPlaneKey string `envconfig:"API_CONTROL_PLANE_KEY"`
 
 	// JWT configuration
 	JWTSecret               string `envconfig:"JWT_SECRET" required:"true"`

@@ -26,6 +26,8 @@ func (h *Handler) RefreshToken(w http.ResponseWriter, r *http.Request) {
 			common.RespondError(w, http.StatusUnauthorized, err, "refresh token has expired")
 		case errors.Is(err, service.ErrUserBanned):
 			common.RespondError(w, http.StatusForbidden, err, "user account is banned")
+		case errors.Is(err, service.ErrEmailNotVerified):
+			common.RespondError(w, http.StatusForbidden, err, "verify your email before signing in")
 		default:
 			common.RespondError(w, http.StatusInternalServerError, err, "failed to refresh token")
 		}

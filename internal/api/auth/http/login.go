@@ -41,6 +41,8 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		switch {
 		case errors.Is(err, service.ErrInvalidCredentials):
 			common.RespondError(w, http.StatusUnauthorized, err, "invalid email or password")
+		case errors.Is(err, service.ErrEmailNotVerified):
+			common.RespondError(w, http.StatusForbidden, err, "verify your email before signing in")
 		case errors.Is(err, service.ErrUserBanned):
 			common.RespondError(w, http.StatusForbidden, err, "user account is banned")
 		default:

@@ -62,7 +62,5 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.setRefreshTokenCookie(w, response.RefreshToken)
-
 	common.RespondJSON(w, http.StatusCreated, response)
 }

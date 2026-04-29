@@ -18,4 +18,7 @@ const (
 
 	// Problem Management
 	ProblemsManage = "problems.manage"
+
+	// Submission Management
+	SubmissionsViewAll = "submissions.view_all"
 )

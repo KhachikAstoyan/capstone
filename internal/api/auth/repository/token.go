@@ -116,7 +116,6 @@ func (r *refreshTokenRepository) CleanupExpiredTokens(ctx context.Context) error
 }
 
 func isUniqueViolation(err error) bool {
-	return err != nil && (
-		err.Error() == "pq: duplicate key value violates unique constraint" ||
+	return err != nil && (err.Error() == "pq: duplicate key value violates unique constraint" ||
 		err.Error() == "UNIQUE constraint failed")
 }

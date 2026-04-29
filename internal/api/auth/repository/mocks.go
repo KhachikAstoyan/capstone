@@ -9,11 +9,12 @@ import (
 
 // MockUserRepository is a mock implementation of UserRepository for testing
 type MockUserRepository struct {
-	CreateUserFunc      func(ctx context.Context, user *domain.User) error
-	GetUserByIDFunc     func(ctx context.Context, id uuid.UUID) (*domain.User, error)
-	GetUserByHandleFunc func(ctx context.Context, handle string) (*domain.User, error)
-	GetUserByEmailFunc  func(ctx context.Context, email string) (*domain.User, error)
-	UpdateUserFunc      func(ctx context.Context, user *domain.User) error
+	CreateUserFunc         func(ctx context.Context, user *domain.User) error
+	GetUserByIDFunc        func(ctx context.Context, id uuid.UUID) (*domain.User, error)
+	GetUserByHandleFunc    func(ctx context.Context, handle string) (*domain.User, error)
+	GetUserByEmailFunc     func(ctx context.Context, email string) (*domain.User, error)
+	ListSolvedProblemsFunc func(ctx context.Context, userID uuid.UUID) ([]domain.PublicSolvedProblem, error)
+	UpdateUserFunc         func(ctx context.Context, user *domain.User) error
 }
 
 func (m *MockUserRepository) CreateUser(ctx context.Context, user *domain.User) error {
@@ -42,6 +43,13 @@ func (m *MockUserRepository) GetUserByEmail(ctx context.Context, email string) (
 		return m.GetUserByEmailFunc(ctx, email)
 	}
 	return nil, ErrUserNotFound
+}
+
+func (m *MockUserRepository) ListSolvedProblems(ctx context.Context, userID uuid.UUID) ([]domain.PublicSolvedProblem, error) {
+	if m.ListSolvedProblemsFunc != nil {
+		return m.ListSolvedProblemsFunc(ctx, userID)
+	}
+	return []domain.PublicSolvedProblem{}, nil
 }
 
 func (m *MockUserRepository) UpdateUser(ctx context.Context, user *domain.User) error {
@@ -89,11 +97,11 @@ func (m *MockAuthIdentityRepository) UpdateLastLogin(ctx context.Context, identi
 
 // MockRefreshTokenRepository is a mock implementation of RefreshTokenRepository for testing
 type MockRefreshTokenRepository struct {
-	CreateRefreshTokenFunc   func(ctx context.Context, token *domain.RefreshToken) error
+	CreateRefreshTokenFunc    func(ctx context.Context, token *domain.RefreshToken) error
 	GetRefreshTokenByHashFunc func(ctx context.Context, tokenHash []byte) (*domain.RefreshToken, error)
-	RevokeRefreshTokenFunc   func(ctx context.Context, tokenID uuid.UUID, replacedBy *uuid.UUID) error
-	RevokeAllUserTokensFunc  func(ctx context.Context, userID uuid.UUID) error
-	CleanupExpiredTokensFunc func(ctx context.Context) error
+	RevokeRefreshTokenFunc    func(ctx context.Context, tokenID uuid.UUID, replacedBy *uuid.UUID) error
+	RevokeAllUserTokensFunc   func(ctx context.Context, userID uuid.UUID) error
+	CleanupExpiredTokensFunc  func(ctx context.Context) error
 }
 
 func (m *MockRefreshTokenRepository) CreateRefreshToken(ctx context.Context, token *domain.RefreshToken) error {
@@ -127,6 +135,34 @@ func (m *MockRefreshTokenRepository) RevokeAllUserTokens(ctx context.Context, us
 func (m *MockRefreshTokenRepository) CleanupExpiredTokens(ctx context.Context) error {
 	if m.CleanupExpiredTokensFunc != nil {
 		return m.CleanupExpiredTokensFunc(ctx)
+	}
+	return nil
+}
+
+// MockEmailVerificationRepository is a mock implementation of EmailVerificationRepository for testing.
+type MockEmailVerificationRepository struct {
+	CreateEmailVerificationTokenFunc     func(ctx context.Context, userID uuid.UUID, tokenHash []byte) error
+	GetEmailVerificationTokenByHashFunc  func(ctx context.Context, tokenHash []byte) (*domain.EmailVerificationToken, error)
+	DeleteEmailVerificationTokenByIDFunc func(ctx context.Context, id uuid.UUID) error
+}
+
+func (m *MockEmailVerificationRepository) CreateEmailVerificationToken(ctx context.Context, userID uuid.UUID, tokenHash []byte) error {
+	if m.CreateEmailVerificationTokenFunc != nil {
+		return m.CreateEmailVerificationTokenFunc(ctx, userID, tokenHash)
+	}
+	return nil
+}
+
+func (m *MockEmailVerificationRepository) GetEmailVerificationTokenByHash(ctx context.Context, tokenHash []byte) (*domain.EmailVerificationToken, error) {
+	if m.GetEmailVerificationTokenByHashFunc != nil {
+		return m.GetEmailVerificationTokenByHashFunc(ctx, tokenHash)
+	}
+	return nil, ErrEmailVerificationTokenNotFound
+}
+
+func (m *MockEmailVerificationRepository) DeleteEmailVerificationTokenByID(ctx context.Context, id uuid.UUID) error {
+	if m.DeleteEmailVerificationTokenByIDFunc != nil {
+		return m.DeleteEmailVerificationTokenByIDFunc(ctx, id)
 	}
 	return nil
 }
