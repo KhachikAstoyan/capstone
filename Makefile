@@ -12,7 +12,7 @@ GOFLAGS ?=
 CGO_ENABLED ?= 0
 
 # Build settings
-BUILD_DIR := build
+BUILD_DIR := ./build
 
 # Version info
 TIMESTAMP := $(shell date +"%Y%m%d.%H%M")
@@ -28,21 +28,29 @@ API_BINARY := api
 API_BINARY_SRC := ./cmd/api
 WORKER_BINARY := worker
 WORKER_BINARY_SRC := ./cmd/worker
+EMAIL_BINARY := email
+EMAIL_BINARY_SRC := ./cmd/email
+CP_BINARY := control-plane
+CP_BINARY_SRC := ./cmd/control-plane
 
 .PHONY: help
 help:
 	@printf "$(OK_COLOR)Available targets:$(NO_COLOR)\n"
-	@printf "  build              Build both api and worker\n"
-	@printf "  build-api          Build api binary\n"
-	@printf "  build-worker       Build worker binary\n"
-	@printf "  clean              Remove build artifacts\n"
-	@printf "  test               Run Go tests\n"
-	@printf "  fmt                Format Go code\n"
-	@printf "  tidy               Go mod tidy\n"
-	@printf "  deps               Download dependencies\n"
+	@printf "  build-all             Build api, worker, email, and control-plane binaries\n"
+	@printf "  build-api             Build api binary\n"
+	@printf "  build-worker          Build worker binary\n"
+	@printf "  build-email           Build email worker binary\n"
+	@printf "  build-control-plane   Build execution control-plane binary\n"
+	@printf "  run-control-plane     Run control-plane (needs CP_DATABASE_URL)\n"
+	@printf "  clean                 Remove build artifacts\n"
+	@printf "  test                  Run Go tests\n"
+	@printf "  fmt                   Format Go code\n"
+	@printf "  tidy                  Go mod tidy\n"
+	@printf "  deps                  Download dependencies\n"
+	@printf "  run-email             Run email worker (needs EMAIL_RABBITMQ_URL)\n"
 
 .PHONY: all
-all: clean deps build
+all: clean deps build-all
 
 $(BUILD_DIR):
 	@mkdir -p $(BUILD_DIR)
@@ -52,20 +60,82 @@ deps:
 	@printf "$(OK_COLOR)==> Installing dependencies$(NO_COLOR)\n"
 	@$(GO) mod download
 
-.PHONY: build
-build: build-api build-worker
+.PHONY: build-all
+build-all: build-api build-worker build-email build-control-plane
 
 .PHONY: build-api
-build-api: $(BUILD_DIR)
+build-api: | $(BUILD_DIR)
 	@printf "$(OK_COLOR)==> Building API binary$(NO_COLOR)\n"
 	@CGO_ENABLED=$(CGO_ENABLED) $(GO) build $(GOFLAGS) -trimpath $(GO_LINKER_FLAGS) -o $(BUILD_DIR)/$(API_BINARY) $(API_BINARY_SRC)
 	@printf "$(OK_COLOR)✅ API binary built: $(BUILD_DIR)/$(API_BINARY)$(NO_COLOR)\n"
 
+.PHONY: run-api
+run-api:
+	@printf "$(OK_COLOR)==> Running API binary$(NO_COLOR)\n"
+	@$(GO) run $(API_BINARY_SRC)
+
+.PHONY: run-email
+run-email:
+	@printf "$(OK_COLOR)==> Running Email worker$(NO_COLOR)\n"
+	@$(GO) run $(EMAIL_BINARY_SRC)
+
+.PHONY: build-control-plane
+build-control-plane: | $(BUILD_DIR)
+	@printf "$(OK_COLOR)==> Building Control Plane binary$(NO_COLOR)\n"
+	@CGO_ENABLED=$(CGO_ENABLED) $(GO) build $(GOFLAGS) -trimpath $(GO_LINKER_FLAGS) -o $(BUILD_DIR)/$(CP_BINARY) $(CP_BINARY_SRC)
+	@printf "$(OK_COLOR)✅ Control Plane binary built: $(BUILD_DIR)/$(CP_BINARY)$(NO_COLOR)\n"
+
+.PHONY: run-control-plane
+run-control-plane:
+	@printf "$(OK_COLOR)==> Running Control Plane$(NO_COLOR)\n"
+	@$(GO) run $(CP_BINARY_SRC)
+
 .PHONY: build-worker
-build-worker: $(BUILD_DIR)
+build-worker: | $(BUILD_DIR)
 	@printf "$(OK_COLOR)==> Building Worker binary$(NO_COLOR)\n"
 	@CGO_ENABLED=$(CGO_ENABLED) $(GO) build $(GOFLAGS) -trimpath $(GO_LINKER_FLAGS) -o $(BUILD_DIR)/$(WORKER_BINARY) $(WORKER_BINARY_SRC)
 	@printf "$(OK_COLOR)✅ Worker binary built: $(BUILD_DIR)/$(WORKER_BINARY)$(NO_COLOR)\n"
+
+# Firecracker agent binary (cross-compiled for linux/amd64, runs inside VMs)
+FC_AGENT_BINARY := fc-agent
+FC_AGENT_SRC := ./cmd/fc-agent
+
+.PHONY: build-fc-agent
+build-fc-agent: | $(BUILD_DIR)
+	@printf "$(OK_COLOR)==> Building Firecracker in-VM agent (linux/amd64)$(NO_COLOR)\n"
+	@CGO_ENABLED=0 GOOS=linux GOARCH=amd64 $(GO) build -trimpath $(GO_LINKER_FLAGS) -o $(BUILD_DIR)/$(FC_AGENT_BINARY) $(FC_AGENT_SRC)
+	@printf "$(OK_COLOR)✅ fc-agent built: $(BUILD_DIR)/$(FC_AGENT_BINARY)$(NO_COLOR)\n"
+
+# Firecracker rootfs images (ext4) per language
+FC_ROOTFS_DIR ?= /var/lib/fc/rootfs
+FC_ROOTFS_SCRIPT := ./docker/firecracker/build-rootfs.sh
+
+.PHONY: build-rootfs-python build-rootfs-javascript build-rootfs-go build-rootfs-java build-rootfs-all
+
+build-rootfs-python:
+	@printf "$(OK_COLOR)==> Building Python rootfs$(NO_COLOR)\n"
+	@sudo bash $(FC_ROOTFS_SCRIPT) python $(FC_ROOTFS_DIR)
+
+build-rootfs-javascript:
+	@printf "$(OK_COLOR)==> Building JavaScript rootfs$(NO_COLOR)\n"
+	@sudo bash $(FC_ROOTFS_SCRIPT) javascript $(FC_ROOTFS_DIR)
+
+build-rootfs-go:
+	@printf "$(OK_COLOR)==> Building Go rootfs$(NO_COLOR)\n"
+	@sudo bash $(FC_ROOTFS_SCRIPT) go $(FC_ROOTFS_DIR)
+
+build-rootfs-java:
+	@printf "$(OK_COLOR)==> Building Java rootfs$(NO_COLOR)\n"
+	@sudo bash $(FC_ROOTFS_SCRIPT) java $(FC_ROOTFS_DIR)
+
+build-rootfs-all: build-rootfs-python build-rootfs-javascript build-rootfs-go build-rootfs-java
+	@printf "$(OK_COLOR)✅ All Firecracker rootfs images built in $(FC_ROOTFS_DIR)$(NO_COLOR)\n"
+
+.PHONY: build-email
+build-email: | $(BUILD_DIR)
+	@printf "$(OK_COLOR)==> Building Email worker binary$(NO_COLOR)\n"
+	@CGO_ENABLED=$(CGO_ENABLED) $(GO) build $(GOFLAGS) -trimpath $(GO_LINKER_FLAGS) -o $(BUILD_DIR)/$(EMAIL_BINARY) $(EMAIL_BINARY_SRC)
+	@printf "$(OK_COLOR)✅ Email binary built: $(BUILD_DIR)/$(EMAIL_BINARY)$(NO_COLOR)\n"
 
 .PHONY: clean
 clean:

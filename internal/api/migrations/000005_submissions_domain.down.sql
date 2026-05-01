@@ -1,0 +1,11 @@
+BEGIN;
+
+ALTER TABLE submissions
+    DROP COLUMN IF EXISTS cp_job_id,
+    DROP COLUMN IF EXISTS status;
+
+DROP TABLE IF EXISTS submission_results;
+DROP TABLE IF EXISTS problem_test_cases;
+DROP TYPE  IF EXISTS SUBMISSION_STATUS;
+
+COMMIT;

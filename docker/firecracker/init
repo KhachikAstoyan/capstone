@@ -1,0 +1,13 @@
+#!/bin/sh
+# PID 1 init for Firecracker microVMs.
+# Mounts essential pseudo-filesystems, then execs the fc-agent.
+
+mount -t proc proc /proc
+mount -t sysfs sysfs /sys
+mount -t devtmpfs devtmpfs /dev 2>/dev/null || true
+mkdir -p /dev/pts /dev/shm /workspace /tmp
+mount -t devpts devpts /dev/pts 2>/dev/null || true
+mount -t tmpfs tmpfs /tmp
+mount -t tmpfs tmpfs /dev/shm
+
+exec /usr/local/bin/fc-agent
