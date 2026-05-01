@@ -136,15 +136,20 @@ var javaRunnerTemplate string
 type DockerExecutor struct {
 	client    *dockerclient.Client
 	languages map[string]LangConfig
+	runtime   string
 	log       *zap.Logger
 }
 
 // NewDockerExecutor creates a DockerExecutor using the host Docker daemon.
-func NewDockerExecutor(languages map[string]LangConfig, log *zap.Logger) (*DockerExecutor, error) {
+// runtime specifies the container runtime (e.g., "runc", "runsc" for gvisor).
+func NewDockerExecutor(languages map[string]LangConfig, runtime string, log *zap.Logger) (*DockerExecutor, error) {
 	if log == nil {
 		log = zap.NewNop()
 	}
-	log.Info("initializing docker executor")
+	if runtime == "" {
+		runtime = "runc"
+	}
+	log.Info("initializing docker executor", zap.String("runtime", runtime))
 	cli, err := dockerclient.NewClientWithOpts(
 		dockerclient.FromEnv,
 		dockerclient.WithAPIVersionNegotiation(),
@@ -153,7 +158,7 @@ func NewDockerExecutor(languages map[string]LangConfig, log *zap.Logger) (*Docke
 		return nil, fmt.Errorf("connect to docker daemon: %w", err)
 	}
 	log.Info("docker client initialized", zap.Int("configured_languages", len(languages)))
-	return &DockerExecutor{client: cli, languages: languages, log: log}, nil
+	return &DockerExecutor{client: cli, languages: languages, runtime: runtime, log: log}, nil
 }
 
 // Execute implements Executor.
@@ -291,6 +296,7 @@ func (e *DockerExecutor) runContainer(ctx context.Context, a *domain.Assignment,
 		Cmd:             lang.RunCmd,
 		NetworkDisabled: true,
 		WorkingDir:      "/workspace",
+		User:            "65534:65534", // nobody — run as non-root inside container
 	}
 
 	hostCfg := &container.HostConfig{
@@ -313,6 +319,7 @@ func (e *DockerExecutor) runContainer(ctx context.Context, a *domain.Assignment,
 		Tmpfs: map[string]string{"/tmp": tmpfsOpts(lang)},
 		CapDrop:     []string{"ALL"},
 		NetworkMode: "none",
+		Runtime:     e.runtime,
 	}
 
 	log.Info("creating docker container",
@@ -326,12 +333,12 @@ func (e *DockerExecutor) runContainer(ctx context.Context, a *domain.Assignment,
 	}
 	containerID := resp.ID
 	log.Info("docker container created", zap.String("container_id", containerID))
-	// defer func() {
-	// 	log.Info("removing docker container", zap.String("container_id", containerID))
-	// 	if err := e.client.ContainerRemove(context.Background(), containerID, container.RemoveOptions{Force: true}); err != nil {
-	// 		log.Warn("failed to remove docker container", zap.String("container_id", containerID), zap.Error(err))
-	// 	}
-	// }()
+	defer func() {
+		log.Info("removing docker container", zap.String("container_id", containerID))
+		if err := e.client.ContainerRemove(context.Background(), containerID, container.RemoveOptions{Force: true}); err != nil {
+			log.Warn("failed to remove docker container", zap.String("container_id", containerID), zap.Error(err))
+		}
+	}()
 
 	log.Info("starting docker container", zap.String("container_id", containerID))
 	if err := e.client.ContainerStart(runCtx, containerID, container.StartOptions{}); err != nil {

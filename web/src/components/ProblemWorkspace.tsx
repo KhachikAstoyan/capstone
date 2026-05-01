@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import Editor, { type BeforeMount, type OnMount } from "@monaco-editor/react";
 import { toast } from "sonner";
+import { SubmissionsTab } from "@/components/SubmissionsTab";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -81,6 +82,7 @@ const STATUS_LABEL: Record<SubmissionStatus, string> = {
   runtime_error: "Runtime error",
   compilation_error: "Compilation error",
   internal_error: "Internal error",
+  blocked: "Blocked",
 };
 
 function formatVerdict(verdict: string | undefined): string {
@@ -212,7 +214,7 @@ function DiffPanels({
             return (
               <span
                 key={idx}
-                className="rounded-sm bg-emerald-100 text-emerald-700 dark:bg-emerald-500/25 dark:text-emerald-300"
+                className="rounded-sm bg-rose-100 text-rose-700 dark:bg-rose-500/30 dark:text-rose-300"
               >
                 {s.text}
               </span>
@@ -238,10 +240,6 @@ function DiffPanels({
             );
           })}
         </pre>
-        <p className="text-[9px] uppercase tracking-wider text-muted-foreground">
-          <span className="text-rose-600 dark:text-rose-400">red</span> = wrong or redundant ·{" "}
-          <span className="text-emerald-600 dark:text-emerald-400">green</span> = correct char
-        </p>
       </div>
     </>
   );
@@ -480,6 +478,10 @@ function TestResultsPane({
 
   const consoleOutput = result?.compiler_output ?? stdoutSegments ?? null;
 
+  // Calculate pass/fail stats
+  const passedCount = rows.filter(r => isAcceptedVerdict(r.verdict)).length;
+  const totalCount = rows.length;
+
   return (
     <div className="flex h-full min-h-0 flex-col bg-card">
       <Tabs
@@ -498,16 +500,26 @@ function TestResultsPane({
               Console
             </TabsTrigger>
           </TabsList>
-          <Badge
-            variant="secondary"
-            className="shrink-0 text-[10px] font-normal"
-          >
-            {isExecuting
-              ? "Executing"
-              : submission
-                ? STATUS_LABEL[submission.status]
-                : "No run yet"}
-          </Badge>
+          <div className="flex items-center gap-2">
+            {totalCount > 0 && (
+              <Badge
+                variant="outline"
+                className="shrink-0 text-[10px] font-normal"
+              >
+                {passedCount} / {totalCount} passed
+              </Badge>
+            )}
+            <Badge
+              variant="secondary"
+              className="shrink-0 text-[10px] font-normal"
+            >
+              {isExecuting
+                ? "Executing"
+                : submission
+                  ? STATUS_LABEL[submission.status]
+                  : "No run yet"}
+            </Badge>
+          </div>
         </div>
 
         <TabsContent
@@ -518,6 +530,41 @@ function TestResultsPane({
             <p className="px-4 py-5 text-xs text-rose-600 dark:text-rose-400">
               {error}
             </p>
+          )}
+          {submission?.validation && !submission.validation.is_allowed && (
+            <div className="border-b border-border bg-destructive/5 p-4">
+              <div className="flex items-start gap-3">
+                <XCircle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-sm font-semibold text-destructive">
+                    Security Validation Failed
+                  </h3>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {submission.validation.reason || "Your code violates security constraints and cannot be executed."}
+                  </p>
+                  {submission.validation.details && (
+                    <details className="mt-2">
+                      <summary className="cursor-pointer text-xs font-medium text-muted-foreground hover:text-foreground">
+                        Details
+                      </summary>
+                      <div className="mt-2 space-y-2">
+                        {Array.isArray(submission.validation.details.violations) &&
+                          (submission.validation.details.violations as string[]).length > 0 && (
+                          <div>
+                            <p className="text-xs font-medium text-destructive">Violations</p>
+                            <ul className="mt-1 list-disc pl-4 space-y-0.5">
+                              {(submission.validation.details.violations as string[]).map((v, i) => (
+                                <li key={i} className="text-xs text-muted-foreground">{v}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                    </details>
+                  )}
+                </div>
+              </div>
+            </div>
           )}
           {!error && isCompilationError && result?.compiler_output && (
             <div className="p-3">
@@ -852,6 +899,7 @@ export function ProblemWorkspace({ problem }: { problem: Problem }) {
               difficulty: undefined,
               tags: undefined,
               page: 1,
+              sort: undefined,
             }}
           >
             <ArrowLeft className="size-3.5 sm:size-4" />
@@ -881,25 +929,57 @@ export function ProblemWorkspace({ problem }: { problem: Problem }) {
         orientation="horizontal"
         className="flex-1 min-h-0 overflow-hidden"
       >
-        {/* ── left: problem statement ──────────────────────────────────── */}
+        {/* ── left: problem statement + submissions ──────────────────────── */}
         <ResizablePanel
           defaultSize={35}
           minSize={24}
           className="h-full min-h-0"
         >
           <div className="flex h-full min-h-0 flex-col">
-            <div className="flex shrink-0 items-center border-b border-border bg-muted/40 px-4 py-2">
-              <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                Description
-              </span>
-            </div>
-            <ScrollArea className="flex-1">
-              <div className="space-y-5 p-4 sm:p-5">
-                <ProblemMeta problem={problem} />
-                <Separator />
-                <StatementMarkdown source={problem.statement_markdown} />
+            <Tabs
+              defaultValue="description"
+              className="flex min-h-0 flex-1 flex-col gap-0"
+            >
+              <div className="flex shrink-0 items-center border-b border-border bg-muted/40 px-4 py-0">
+                <TabsList
+                  variant="line"
+                  className="h-10 w-auto justify-start gap-5 bg-transparent p-0"
+                >
+                  <TabsTrigger
+                    value="description"
+                    className="px-0 text-xs font-medium"
+                  >
+                    Description
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="submissions"
+                    className="px-0 text-xs font-medium"
+                  >
+                    Submissions
+                  </TabsTrigger>
+                </TabsList>
               </div>
-            </ScrollArea>
+
+              <TabsContent
+                value="description"
+                className="mt-0 min-h-0 flex-1 overflow-auto p-0 data-[state=inactive]:hidden"
+              >
+                <ScrollArea className="flex-1">
+                  <div className="space-y-5 p-4 sm:p-5">
+                    <ProblemMeta problem={problem} />
+                    <Separator />
+                    <StatementMarkdown source={problem.statement_markdown} />
+                  </div>
+                </ScrollArea>
+              </TabsContent>
+
+              <TabsContent
+                value="submissions"
+                className="mt-0 min-h-0 flex-1 overflow-hidden p-0 data-[state=inactive]:hidden"
+              >
+                <SubmissionsTab problemId={problem.id} />
+              </TabsContent>
+            </Tabs>
           </div>
         </ResizablePanel>
 

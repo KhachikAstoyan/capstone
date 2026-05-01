@@ -13,6 +13,12 @@ import (
 	"time"
 
 	"github.com/KhachikAstoyan/capstone/internal/api"
+	airepo "github.com/KhachikAstoyan/capstone/internal/api/ai/repository"
+	aiservice "github.com/KhachikAstoyan/capstone/internal/api/ai/service"
+	aiapi "go.jetify.com/ai/api"
+	aimodel "github.com/KhachikAstoyan/capstone/internal/api/ai"
+	"go.jetify.com/ai/provider/anthropic"
+	"go.jetify.com/ai/provider/openai"
 	"github.com/KhachikAstoyan/capstone/internal/api/auth"
 	authhttp "github.com/KhachikAstoyan/capstone/internal/api/auth/http"
 	authrepo "github.com/KhachikAstoyan/capstone/internal/api/auth/repository"
@@ -102,6 +108,7 @@ func main() {
 	identityRepo := authrepo.NewAuthIdentityRepository(db)
 	refreshTokenRepo := authrepo.NewRefreshTokenRepository(db)
 	emailVerificationRepo := authrepo.NewEmailVerificationRepository(db)
+	statsRepo := authrepo.NewStatsRepository(db)
 
 	// RBAC repositories
 	roleRepo := rbacrepo.NewRoleRepository(db)
@@ -133,7 +140,7 @@ func main() {
 			zap.String("email_verification_routing_key", cfg.RabbitMQEmailVerificationRoutingKey))
 	}
 
-	authService := authservice.NewService(userRepo, identityRepo, refreshTokenRepo, emailVerificationRepo, jwtManager, rbacService, cfg.FrontendURL, emailVerificationPub)
+	authService := authservice.NewService(userRepo, identityRepo, refreshTokenRepo, emailVerificationRepo, statsRepo, jwtManager, rbacService, cfg.FrontendURL, emailVerificationPub)
 	problemsService := problemsservice.NewService(problemsRepo)
 	tagsService := tagsservice.New(tagsRepo)
 	languagesService := languagesservice.New(languagesRepo)
@@ -150,7 +157,26 @@ func main() {
 
 	cpClient := submissionsclient.NewCPClient(cfg.ControlPlaneURL, cfg.ControlPlaneKey)
 	submissionsRepo := submissionsrepo.NewRepository(db)
-	submissionsService := submissionsservice.NewService(submissionsRepo, cpClient, problemsRepo)
+
+	// AI validation service
+	aiRepo := airepo.New(db)
+	var aiModel aiapi.LanguageModel
+	switch cfg.AIProvider {
+	case "openai":
+		if cfg.AIAPIBaseURL != "" {
+			log.Info("using ollama with openai provider", zap.String("base_url", cfg.AIAPIBaseURL))
+			aiModel = aimodel.NewOllamaModel(cfg.AIAPIBaseURL, cfg.AIModel)
+		} else {
+			aiModel = openai.NewLanguageModel(cfg.AIModel)
+		}
+	case "anthropic":
+		fallthrough
+	default:
+		aiModel = anthropic.NewLanguageModel(cfg.AIModel)
+	}
+	aiSvc := aiservice.New(aiRepo, aiModel, log)
+
+	submissionsService := submissionsservice.NewService(submissionsRepo, cpClient, problemsRepo, aiSvc)
 	submissionsHandler := submissionshttp.NewHandler(submissionsService, rbacManager)
 
 	handler := setupRoutes(authHandler, rbacHandler, problemsHandler, tagsHandler, languagesHandler, submissionsHandler, jwtManager, rbacManager)

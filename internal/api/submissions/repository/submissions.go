@@ -11,6 +11,10 @@ import (
 	"github.com/google/uuid"
 )
 
+const (
+	SecurityCategoryCodeBlocked = "code_blocked"
+)
+
 var (
 	ErrSubmissionNotFound = errors.New("submission not found")
 	ErrLanguageNotFound   = errors.New("language not found or not enabled")
@@ -28,6 +32,7 @@ type Repository interface {
 	ResolveLanguage(ctx context.Context, languageKey string) (id uuid.UUID, key string, err error)
 	IsLanguageAllowed(ctx context.Context, problemID, languageID uuid.UUID) (bool, error)
 	GetTestCasesForProblem(ctx context.Context, problemID uuid.UUID) ([]*domain.ProblemTestCase, error)
+	LogSecurityEvent(ctx context.Context, submissionID uuid.UUID, category, severity string, detail map[string]interface{}) error
 }
 
 type repository struct {
@@ -234,6 +239,18 @@ func (r *repository) IsLanguageAllowed(ctx context.Context, problemID, languageI
 		)`, problemID, languageID,
 	).Scan(&ok)
 	return ok, err
+}
+
+func (r *repository) LogSecurityEvent(ctx context.Context, submissionID uuid.UUID, category, severity string, detail map[string]interface{}) error {
+	detailJSON, err := json.Marshal(detail)
+	if err != nil {
+		detailJSON = []byte("{}")
+	}
+	const q = `
+		INSERT INTO security_events (submission_id, category, severity, detail_json)
+		VALUES ($1, $2, $3::SECURITY_SEVERITY, $4)`
+	_, err = r.db.ExecContext(ctx, q, submissionID, category, severity, detailJSON)
+	return err
 }
 
 func (r *repository) GetTestCasesForProblem(ctx context.Context, problemID uuid.UUID) ([]*domain.ProblemTestCase, error) {

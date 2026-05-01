@@ -49,6 +49,44 @@ type Config struct {
 	// AllowStubExecutor permits falling back to the in-memory stub executor
 	// when Docker is unavailable. This should stay false outside local/dev runs.
 	AllowStubExecutor bool `envconfig:"WORKER_ALLOW_STUB_EXECUTOR" default:"false"`
+
+	// ── Executor selection ───────────────────────────────────────────────────
+	// Executor selects the sandbox backend: "docker" (default) or "firecracker".
+	Executor string `envconfig:"WORKER_EXECUTOR" default:"docker"`
+
+	// DockerRuntime specifies the Docker runtime to use (e.g. "runc", "runsc" for gvisor).
+	// Defaults to "runc". Set WORKER_DOCKER_RUNTIME=runsc to use gVisor if available.
+	DockerRuntime string `envconfig:"WORKER_DOCKER_RUNTIME" default:"runc"`
+
+	// ── Firecracker / Jailer ─────────────────────────────────────────────────
+	// FCBin is the path to the firecracker binary.
+	FCBin string `envconfig:"WORKER_FC_BIN" default:"/usr/bin/firecracker"`
+
+	// JailerBin is the path to the jailer binary.
+	JailerBin string `envconfig:"WORKER_JAILER_BIN" default:"/usr/bin/jailer"`
+
+	// FCKernel is the host path to a Firecracker-compatible vmlinux kernel.
+	FCKernel string `envconfig:"WORKER_FC_KERNEL" default:"/var/lib/fc/vmlinux"`
+
+	// FCRootfsDir is the directory containing per-language ext4 rootfs images,
+	// named {language}.ext4 (e.g. python.ext4).
+	FCRootfsDir string `envconfig:"WORKER_FC_ROOTFS_DIR" default:"/var/lib/fc/rootfs"`
+
+	// FCSnapshotsDir is where snapshot pairs (*.snap + *.mem) are stored.
+	FCSnapshotsDir string `envconfig:"WORKER_FC_SNAPSHOTS_DIR" default:"/var/lib/fc/snapshots"`
+
+	// FCChrootBase is the jailer chroot base directory.
+	FCChrootBase string `envconfig:"WORKER_FC_CHROOT_BASE" default:"/srv/jailer"`
+
+	// FCJailerUID / FCJailerGID are the UID/GID the jailer drops to.
+	FCJailerUID int `envconfig:"WORKER_FC_JAILER_UID" default:"900"`
+	FCJailerGID int `envconfig:"WORKER_FC_JAILER_GID" default:"900"`
+
+	// FCVCPU is the number of vCPUs allocated to each microVM.
+	FCVCPU int `envconfig:"WORKER_FC_VCPU" default:"1"`
+
+	// FCMemMB is the memory in MiB allocated to each microVM.
+	FCMemMB int `envconfig:"WORKER_FC_MEM_MB" default:"256"`
 }
 
 // LoadConfig loads the worker configuration from environment variables.

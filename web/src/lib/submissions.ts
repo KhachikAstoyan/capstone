@@ -10,7 +10,8 @@ export type SubmissionStatus =
   | "memory_limit_exceeded"
   | "runtime_error"
   | "compilation_error"
-  | "internal_error";
+  | "internal_error"
+  | "blocked";
 
 export interface TestcaseResultEntry {
   testcase_id: string;
@@ -36,6 +37,13 @@ export interface SubmissionResult {
 
 export type SubmissionKind = "run" | "submit";
 
+export interface CodeValidation {
+  is_allowed: boolean;
+  severity: string;
+  reason: string;
+  details?: Record<string, unknown>;
+}
+
 export interface Submission {
   id: string;
   user_id: string;
@@ -47,6 +55,7 @@ export interface Submission {
   kind: SubmissionKind;
   cp_job_id?: string;
   result?: SubmissionResult;
+  validation?: CodeValidation;
   created_at: string;
 }
 
@@ -105,5 +114,6 @@ export function isTerminalSubmissionStatus(status: SubmissionStatus): boolean {
     "runtime_error",
     "compilation_error",
     "internal_error",
+    "blocked",
   ].includes(status);
 }

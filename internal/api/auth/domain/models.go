@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/google/uuid"
@@ -85,4 +86,61 @@ type EmailVerificationToken struct {
 	UserID    uuid.UUID
 	TokenHash []byte
 	CreatedAt time.Time
+}
+
+type UserStats struct {
+	TotalSolved      int                    `json:"total_solved"`
+	SolvedByDifficulty map[string]int        `json:"solved_by_difficulty"`
+	SolvedByTag      []TagStat              `json:"solved_by_tag"`
+	RecentSubmissions []RecentSubmission     `json:"recent_submissions"`
+	SubmissionStats  SubmissionStats        `json:"submission_stats"`
+}
+
+type TagStat struct {
+	TagID    uuid.UUID `json:"tag_id"`
+	TagName  string    `json:"tag_name"`
+	Count    int       `json:"count"`
+	Problems []int     `json:"problems"`
+}
+
+type RecentSubmission struct {
+	ProblemID    uuid.UUID `json:"problem_id"`
+	ProblemSlug  string    `json:"problem_slug"`
+	ProblemTitle string    `json:"problem_title"`
+	LanguageKey  string    `json:"language_key"`
+	Status       string    `json:"status"`
+	CreatedAt    time.Time `json:"created_at"`
+}
+
+type SubmissionStats struct {
+	TotalSubmissions int      `json:"total_submissions"`
+	TotalTestRuns    int      `json:"total_test_runs"`
+	AcceptanceRate   float64  `json:"acceptance_rate"`
+	MostUsedLanguages []LanguageStat `json:"most_used_languages"`
+}
+
+type LanguageStat struct {
+	LanguageKey  string `json:"language_key"`
+	LanguageName string `json:"language_name"`
+	Count        int    `json:"count"`
+}
+
+type AdminUserSummary struct {
+	ID              uuid.UUID  `json:"id"`
+	Handle          string     `json:"handle"`
+	Email           *string    `json:"email,omitempty"`
+	DisplayName     *string    `json:"display_name,omitempty"`
+	Status          UserStatus `json:"status"`
+	CreatedAt       time.Time  `json:"created_at"`
+	ViolationCount  int        `json:"violation_count"`
+	SubmissionCount int        `json:"submission_count"`
+}
+
+type SecurityEvent struct {
+	ID           uuid.UUID       `json:"id"`
+	SubmissionID *uuid.UUID      `json:"submission_id,omitempty"`
+	Category     string          `json:"category"`
+	Severity     string          `json:"severity"`
+	DetailJSON   json.RawMessage `json:"detail_json"`
+	CreatedAt    time.Time       `json:"created_at"`
 }

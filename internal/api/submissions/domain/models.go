@@ -20,6 +20,7 @@ const (
 	StatusRuntimeError        SubmissionStatus = "runtime_error"
 	StatusCompilationError    SubmissionStatus = "compilation_error"
 	StatusInternalError       SubmissionStatus = "internal_error"
+	StatusBlocked             SubmissionStatus = "blocked"
 )
 
 type SubmissionKind string
@@ -33,24 +34,32 @@ func (s SubmissionStatus) IsTerminal() bool {
 	switch s {
 	case StatusAccepted, StatusWrongAnswer, StatusTimeLimitExceeded,
 		StatusMemoryLimitExceeded, StatusRuntimeError,
-		StatusCompilationError, StatusInternalError:
+		StatusCompilationError, StatusInternalError, StatusBlocked:
 		return true
 	}
 	return false
 }
 
 type Submission struct {
-	ID          uuid.UUID         `json:"id"`
-	UserID      uuid.UUID         `json:"user_id"`
-	ProblemID   uuid.UUID         `json:"problem_id"`
-	LanguageID  uuid.UUID         `json:"language_id"`
+	ID         uuid.UUID         `json:"id"`
+	UserID     uuid.UUID         `json:"user_id"`
+	ProblemID  uuid.UUID         `json:"problem_id"`
+	LanguageID uuid.UUID         `json:"language_id"`
 	LanguageKey string            `json:"language_key"`
-	SourceText  *string           `json:"source_text,omitempty"`
-	Status      SubmissionStatus  `json:"status"`
-	Kind        SubmissionKind    `json:"kind"`
-	CPJobID     *uuid.UUID        `json:"cp_job_id,omitempty"`
-	Result      *SubmissionResult `json:"result,omitempty"`
-	CreatedAt   time.Time         `json:"created_at"`
+	SourceText *string           `json:"source_text,omitempty"`
+	Status     SubmissionStatus  `json:"status"`
+	Kind       SubmissionKind    `json:"kind"`
+	CPJobID    *uuid.UUID        `json:"cp_job_id,omitempty"`
+	Result     *SubmissionResult `json:"result,omitempty"`
+	Validation *CodeValidation   `json:"validation,omitempty"`
+	CreatedAt  time.Time         `json:"created_at"`
+}
+
+type CodeValidation struct {
+	IsAllowed bool    `json:"is_allowed"`
+	Severity  string  `json:"severity"`
+	Reason    string  `json:"reason"`
+	Details   map[string]interface{} `json:"details,omitempty"`
 }
 
 type SubmissionResult struct {

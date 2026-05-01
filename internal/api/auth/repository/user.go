@@ -22,6 +22,8 @@ type UserRepository interface {
 	GetUserByEmail(ctx context.Context, email string) (*domain.User, error)
 	ListSolvedProblems(ctx context.Context, userID uuid.UUID) ([]domain.PublicSolvedProblem, error)
 	UpdateUser(ctx context.Context, user *domain.User) error
+	ListAdminUsers(ctx context.Context, query, sortBy string, limit, offset int) ([]domain.AdminUserSummary, int, error)
+	GetUserSecurityEvents(ctx context.Context, userID uuid.UUID, limit, offset int) ([]domain.SecurityEvent, int, error)
 }
 
 type userRepository struct {

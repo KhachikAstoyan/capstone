@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	aidomain "github.com/KhachikAstoyan/capstone/internal/api/ai/domain"
 	"github.com/KhachikAstoyan/capstone/internal/api/submissions/client"
 	"github.com/KhachikAstoyan/capstone/internal/api/submissions/domain"
 	"github.com/KhachikAstoyan/capstone/internal/api/submissions/driver"
@@ -30,6 +31,12 @@ type ProblemsReader interface {
 	GetByID(ctx context.Context, id uuid.UUID) (*problemsdomain.Problem, error)
 }
 
+// AIValidator validates code submissions for security issues.
+type AIValidator interface {
+	ValidateCodeSubmission(ctx context.Context, req aidomain.ValidateCodeRequest) (*aidomain.CodeValidation, error)
+	GetValidationBySubmission(ctx context.Context, submissionID uuid.UUID) (*aidomain.CodeValidation, error)
+}
+
 type Service interface {
 	Submit(ctx context.Context, userID, problemID uuid.UUID, req domain.CreateSubmissionRequest) (*domain.Submission, error)
 	Run(ctx context.Context, userID, problemID uuid.UUID, req domain.CreateSubmissionRequest) (*domain.Submission, error)
@@ -38,13 +45,14 @@ type Service interface {
 }
 
 type service struct {
-	repo         repository.Repository
-	cpClient     client.Client
+	repo       repository.Repository
+	cpClient   client.Client
 	problemsRepo ProblemsReader
+	aiValidator AIValidator
 }
 
-func NewService(repo repository.Repository, cp client.Client, pr ProblemsReader) Service {
-	return &service{repo: repo, cpClient: cp, problemsRepo: pr}
+func NewService(repo repository.Repository, cp client.Client, pr ProblemsReader, aiVal AIValidator) Service {
+	return &service{repo: repo, cpClient: cp, problemsRepo: pr, aiValidator: aiVal}
 }
 
 func (s *service) Submit(ctx context.Context, userID, problemID uuid.UUID, req domain.CreateSubmissionRequest) (*domain.Submission, error) {
@@ -108,6 +116,40 @@ func (s *service) create(ctx context.Context, userID, problemID uuid.UUID, req d
 		return nil, err
 	}
 
+	// Run AI validation synchronously before scheduling execution.
+	// Fail open on validator errors so infra issues don't block all submissions.
+	if s.aiValidator != nil {
+		validateReq := aidomain.ValidateCodeRequest{
+			SubmissionID: sub.ID,
+			UserID:       userID,
+			ProblemID:    problemID,
+			Code:         req.SourceText,
+			LanguageID:   langID,
+			LanguageKey:  langKey,
+		}
+		validation, valErr := s.aiValidator.ValidateCodeSubmission(ctx, validateReq)
+		if valErr == nil && validation != nil && !validation.IsAllowed {
+			_ = s.repo.UpdateStatus(ctx, sub.ID, domain.StatusBlocked)
+			sub.Status = domain.StatusBlocked
+
+			severity := "block"
+			reason := ""
+			if validation.Severity != nil {
+				severity = string(*validation.Severity)
+			}
+			if validation.Reason != nil {
+				reason = *validation.Reason
+			}
+			_ = s.repo.LogSecurityEvent(ctx, sub.ID, repository.SecurityCategoryCodeBlocked, severity, map[string]interface{}{
+				"reason":       reason,
+				"language_key": langKey,
+			})
+
+			s.attachValidation(ctx, sub)
+			return sub, nil
+		}
+	}
+
 	cpTestCases := make([]cpdomain.TestCase, len(testCases))
 	for i, tc := range testCases {
 		cpTestCases[i] = cpdomain.TestCase{
@@ -135,6 +177,7 @@ func (s *service) create(ctx context.Context, userID, problemID uuid.UUID, req d
 
 	sub.CPJobID = &job.ID
 	sub.Status = domain.StatusQueued
+
 	return sub, nil
 }
 
@@ -157,15 +200,18 @@ func (s *service) GetSubmission(ctx context.Context, id, callerUserID uuid.UUID,
 			s.enrichResult(ctx, sub.ProblemID, result)
 		}
 		sub.Result = result
+		s.attachValidation(ctx, sub)
 		return sub, nil
 	}
 
 	if sub.CPJobID == nil {
+		s.attachValidation(ctx, sub)
 		return sub, nil
 	}
 
 	job, err := s.cpClient.GetJobBySubmission(ctx, sub.ID)
 	if err != nil {
+		s.attachValidation(ctx, sub)
 		return sub, nil
 	}
 
@@ -178,6 +224,7 @@ func (s *service) GetSubmission(ctx context.Context, id, callerUserID uuid.UUID,
 	if job.State == cpdomain.JobStateCompleted || job.State == cpdomain.JobStateFailed {
 		jobResult, err := s.cpClient.GetJobResult(ctx, job.ID)
 		if err != nil {
+			s.attachValidation(ctx, sub)
 			return sub, nil
 		}
 
@@ -190,6 +237,7 @@ func (s *service) GetSubmission(ctx context.Context, id, callerUserID uuid.UUID,
 		sub.Result = &result
 	}
 
+	s.attachValidation(ctx, sub)
 	return sub, nil
 }
 
@@ -200,7 +248,16 @@ func (s *service) ListSubmissions(ctx context.Context, filters domain.ListFilter
 	if offset < 0 {
 		offset = 0
 	}
-	return s.repo.List(ctx, filters, limit, offset)
+	subs, total, err := s.repo.List(ctx, filters, limit, offset)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	for _, sub := range subs {
+		s.attachValidation(ctx, sub)
+	}
+
+	return subs, total, nil
 }
 
 func jobStateToStatus(state cpdomain.JobState) domain.SubmissionStatus {
@@ -284,5 +341,32 @@ func (s *service) enrichResult(ctx context.Context, problemID uuid.UUID, result 
 		}
 		entry.InputData = tc.InputData
 		entry.ExpectedData = tc.ExpectedData
+	}
+}
+
+func (s *service) attachValidation(ctx context.Context, sub *domain.Submission) {
+	if s.aiValidator == nil {
+		return
+	}
+
+	validation, err := s.aiValidator.GetValidationBySubmission(ctx, sub.ID)
+	if err != nil || validation == nil {
+		return
+	}
+
+	severity := ""
+	if validation.Severity != nil {
+		severity = string(*validation.Severity)
+	}
+	reason := ""
+	if validation.Reason != nil {
+		reason = *validation.Reason
+	}
+
+	sub.Validation = &domain.CodeValidation{
+		IsAllowed: validation.IsAllowed,
+		Severity:  severity,
+		Reason:    reason,
+		Details:   validation.ValidationMeta,
 	}
 }

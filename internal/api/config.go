@@ -39,6 +39,12 @@ type Config struct {
 	JWTSecret               string `envconfig:"JWT_SECRET" required:"true"`
 	JWTAccessTokenDuration  int    `envconfig:"JWT_ACCESS_TOKEN_DURATION" default:"900"`
 	JWTRefreshTokenDuration int    `envconfig:"JWT_REFRESH_TOKEN_DURATION" default:"604800"`
+
+	// AI validation configuration
+	AIProvider   string `envconfig:"AI_PROVIDER" default:"anthropic"`
+	AIModel      string `envconfig:"AI_MODEL" default:"claude-opus-4-1"`
+	AIAPIKey     string `envconfig:"AI_API_KEY" required:"true"`
+	AIAPIBaseURL string `envconfig:"OPENAI_BASE_URL"`
 }
 
 // LoadConfig loads the API configuration from environment variables

@@ -7,8 +7,9 @@ import {
   type Problem,
   type Tag,
 } from "@/lib/problems";
-import { ProblemCard, ProblemCardSkeleton } from "@/components/ProblemCard";
 import { ProblemFilters } from "@/components/ProblemFilters";
+import { HomeStats } from "@/components/HomeStats";
+import { ProblemTable } from "@/components/ProblemTable";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
@@ -18,6 +19,7 @@ export type HomeSearch = {
   difficulty: string | undefined;
   tags: string[] | undefined;
   page: number;
+  sort: string | undefined;
 };
 
 export const Route = createFileRoute("/")({
@@ -35,6 +37,7 @@ export const Route = createFileRoute("/")({
           : undefined,
       tags: rawTags.length > 0 ? rawTags : undefined,
       page: Number(s.page) > 0 ? Number(s.page) : 1,
+      sort: typeof s.sort === "string" && s.sort ? s.sort : undefined,
     };
   },
   loaderDeps: ({ search }) => search,
@@ -56,6 +59,38 @@ export const Route = createFileRoute("/")({
   component: HomePage,
 });
 
+function sortProblems(problems: Problem[], sortBy?: string): Problem[] {
+  if (!sortBy || sortBy === "default") return problems;
+
+  const copy = [...problems];
+  if (sortBy === "easiest") {
+    return copy.sort((a, b) => {
+      const order = { easy: 0, medium: 1, hard: 2 };
+      return order[a.difficulty] - order[b.difficulty];
+    });
+  }
+  if (sortBy === "hardest") {
+    return copy.sort((a, b) => {
+      const order = { easy: 2, medium: 1, hard: 0 };
+      return order[a.difficulty] - order[b.difficulty];
+    });
+  }
+  if (sortBy === "acceptance-high") {
+    return copy.sort(
+      (a, b) => (b.acceptance_rate ?? 0) - (a.acceptance_rate ?? 0)
+    );
+  }
+  if (sortBy === "acceptance-low") {
+    return copy.sort(
+      (a, b) => (a.acceptance_rate ?? 0) - (b.acceptance_rate ?? 0)
+    );
+  }
+  if (sortBy === "a-z") {
+    return copy.sort((a, b) => a.title.localeCompare(b.title));
+  }
+  return copy;
+}
+
 function HomePage() {
   const { problems, total, tags } = Route.useLoaderData() as {
     problems: Problem[];
@@ -64,8 +99,9 @@ function HomePage() {
   };
   const search = Route.useSearch();
   const router = useRouter();
-  const { q, difficulty, tags: selectedTags = [], page } = search;
+  const { q, difficulty, tags: selectedTags = [], page, sort } = search;
 
+  const sortedProblems = sortProblems(problems, sort);
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const startIndex = (page - 1) * PAGE_SIZE;
 
@@ -77,6 +113,7 @@ function HomePage() {
         difficulty,
         tags: selectedTags.length > 0 ? selectedTags : undefined,
         page: next,
+        sort,
       },
     });
   }
@@ -96,10 +133,12 @@ function HomePage() {
         </p>
       </div>
 
+      <HomeStats total={total} />
+
       <div className="mb-6">
         <ProblemFilters
           tags={tags}
-          currentSearch={{ q, difficulty, tags: selectedTags, page }}
+          currentSearch={{ q, difficulty, tags: selectedTags, page, sort }}
         />
       </div>
 
@@ -112,15 +151,11 @@ function HomePage() {
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {problems.map((problem: Problem, i: number) => (
-              <ProblemCard
-                key={problem.id}
-                problem={problem}
-                index={startIndex + i + 1}
-              />
-            ))}
-          </div>
+          <ProblemTable
+            problems={sortedProblems}
+            startIndex={startIndex}
+            sort={sort}
+          />
 
           {totalPages > 1 && (
             <div className="mt-8 flex items-center justify-center gap-3">
@@ -156,17 +191,31 @@ function HomePage() {
 function HomePageSkeleton() {
   return (
     <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
-      <div className="mb-6 flex flex-col gap-1">
+      <div className="mb-8 border-b border-border pb-6">
         <div className="h-8 w-32 animate-pulse rounded-md bg-muted" />
-        <div className="h-4 w-40 animate-pulse rounded bg-muted" />
+        <div className="mt-1 h-4 w-40 animate-pulse rounded bg-muted" />
       </div>
-      <div className="mb-6 flex gap-2">
+      <div className="mb-6 flex gap-3">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <div key={i} className="h-20 w-24 animate-pulse rounded-lg bg-muted" />
+        ))}
+      </div>
+      <div className="mb-6 flex flex-wrap gap-2">
         <div className="h-9 flex-1 animate-pulse rounded-md bg-muted sm:max-w-72" />
         <div className="h-9 w-36 animate-pulse rounded-md bg-muted" />
+        <div className="h-9 w-40 animate-pulse rounded-md bg-muted" />
       </div>
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="space-y-2 rounded-lg border border-border bg-card">
         {Array.from({ length: 6 }).map((_, i) => (
-          <ProblemCardSkeleton key={i} />
+          <div
+            key={i}
+            className="flex items-center gap-4 border-b border-border/50 px-4 py-3 last:border-b-0"
+          >
+            <div className="h-4 w-4 animate-pulse rounded bg-muted" />
+            <div className="h-4 w-8 animate-pulse rounded bg-muted" />
+            <div className="h-4 flex-1 animate-pulse rounded bg-muted" />
+            <div className="h-4 w-20 animate-pulse rounded bg-muted" />
+          </div>
         ))}
       </div>
     </main>

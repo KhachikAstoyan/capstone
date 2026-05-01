@@ -21,7 +21,7 @@ interface ProblemFiltersProps {
 
 export function ProblemFilters({ tags, currentSearch }: ProblemFiltersProps) {
   const router = useRouter()
-  const { q: currentQ, difficulty: currentDifficulty, tags: currentTags = [] } = currentSearch
+  const { q: currentQ, difficulty: currentDifficulty, tags: currentTags = [], sort: currentSort } = currentSearch
   const [searchValue, setSearchValue] = useState(currentQ ?? '')
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -39,6 +39,7 @@ export function ProblemFilters({ tags, currentSearch }: ProblemFiltersProps) {
         difficulty: 'difficulty' in patch ? patch.difficulty : currentDifficulty,
         tags: nextTags && nextTags.length > 0 ? nextTags : undefined,
         page: patch.page ?? 1,
+        sort: 'sort' in patch ? patch.sort : currentSort,
       },
     })
   }
@@ -56,6 +57,10 @@ export function ProblemFilters({ tags, currentSearch }: ProblemFiltersProps) {
     navigate({ difficulty: value === 'all' ? undefined : value })
   }
 
+  function handleSortChange(value: string) {
+    navigate({ sort: value === 'default' ? undefined : value })
+  }
+
   function toggleTag(tagName: string) {
     const next = currentTags.includes(tagName)
       ? currentTags.filter((t) => t !== tagName)
@@ -65,7 +70,7 @@ export function ProblemFilters({ tags, currentSearch }: ProblemFiltersProps) {
 
   function clearAll() {
     setSearchValue('')
-    navigate({ q: undefined, difficulty: undefined, tags: undefined })
+    navigate({ q: undefined, difficulty: undefined, tags: undefined, sort: undefined })
   }
 
   const hasFilters =
@@ -75,7 +80,7 @@ export function ProblemFilters({ tags, currentSearch }: ProblemFiltersProps) {
 
   return (
     <div className="flex flex-col gap-3">
-      {/* Top row: search + difficulty */}
+      {/* Top row: search + difficulty + sort */}
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative min-w-48 flex-1 sm:max-w-72">
           <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
@@ -99,6 +104,23 @@ export function ProblemFilters({ tags, currentSearch }: ProblemFiltersProps) {
             <SelectItem value="easy">Easy</SelectItem>
             <SelectItem value="medium">Medium</SelectItem>
             <SelectItem value="hard">Hard</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <Select
+          value={currentSort ?? 'default'}
+          onValueChange={handleSortChange}
+        >
+          <SelectTrigger className="h-9 w-40">
+            <SelectValue placeholder="Sort" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="default">Default</SelectItem>
+            <SelectItem value="easiest">Easiest first</SelectItem>
+            <SelectItem value="hardest">Hardest first</SelectItem>
+            <SelectItem value="acceptance-high">Highest acceptance</SelectItem>
+            <SelectItem value="acceptance-low">Lowest acceptance</SelectItem>
+            <SelectItem value="a-z">A-Z</SelectItem>
           </SelectContent>
         </Select>
 

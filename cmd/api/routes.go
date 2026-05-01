@@ -3,9 +3,12 @@ package main
 import (
 	"net/http"
 
+	"time"
+
 	"github.com/KhachikAstoyan/capstone/internal/api/auth"
 	authhttp "github.com/KhachikAstoyan/capstone/internal/api/auth/http"
 	languageshttp "github.com/KhachikAstoyan/capstone/internal/api/languages/http"
+	apimiddleware "github.com/KhachikAstoyan/capstone/internal/api/middleware"
 	problemshttp "github.com/KhachikAstoyan/capstone/internal/api/problems/http"
 	"github.com/KhachikAstoyan/capstone/internal/api/rbac"
 	rbachttp "github.com/KhachikAstoyan/capstone/internal/api/rbac/http"
@@ -45,6 +48,7 @@ func setupRoutes(
 				r.Get("/me", authHandler.GetCurrentUser)
 				r.Get("/me/roles", rbacHandler.GetMyRoles)
 				r.Get("/me/permissions", rbacHandler.GetMyPermissions)
+				r.Get("/me/stats", authHandler.GetUserStats)
 			})
 		})
 
@@ -139,8 +143,8 @@ func setupRoutes(
 		// Submission routes (require authentication)
 		r.Group(func(r chi.Router) {
 			r.Use(authhttp.AuthMiddleware(jwtManager))
-			r.Post("/problems/{problemID}/submit", submissionsHandler.Submit)
-			r.Post("/problems/{problemID}/run", submissionsHandler.Run)
+			r.With(apimiddleware.SubmissionRateLimit(5, 60*time.Second)).Post("/problems/{problemID}/submit", submissionsHandler.Submit)
+			r.With(apimiddleware.SubmissionRateLimit(15, 60*time.Second)).Post("/problems/{problemID}/run", submissionsHandler.Run)
 			r.Get("/submissions/{id}", submissionsHandler.GetSubmission)
 			r.Get("/submissions", submissionsHandler.ListSubmissions)
 		})

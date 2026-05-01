@@ -80,6 +80,9 @@ type Service interface {
 	VerifyEmail(ctx context.Context, token string) (VerifyEmailOutcome, error)
 	GetUserByID(ctx context.Context, userID uuid.UUID) (*domain.User, error)
 	GetPublicProfile(ctx context.Context, userRef string) (*domain.PublicUserProfile, error)
+	GetUserStats(ctx context.Context, userID uuid.UUID) (*domain.UserStats, error)
+	ListAdminUsers(ctx context.Context, query, sortBy string, limit, offset int) ([]domain.AdminUserSummary, int, error)
+	GetUserSecurityEvents(ctx context.Context, userID uuid.UUID, limit, offset int) ([]domain.SecurityEvent, int, error)
 }
 
 type service struct {
@@ -87,6 +90,7 @@ type service struct {
 	identityRepo          repository.AuthIdentityRepository
 	refreshTokenRepo      repository.RefreshTokenRepository
 	emailVerificationRepo repository.EmailVerificationRepository
+	statsRepo             repository.StatsRepository
 	jwtManager            *auth.JWTManager
 	rbacService           rbacservice.Service
 	frontendURL           string
@@ -98,6 +102,7 @@ func NewService(
 	identityRepo repository.AuthIdentityRepository,
 	refreshTokenRepo repository.RefreshTokenRepository,
 	emailVerificationRepo repository.EmailVerificationRepository,
+	statsRepo repository.StatsRepository,
 	jwtManager *auth.JWTManager,
 	rbacService rbacservice.Service,
 	frontendURL string,
@@ -111,6 +116,7 @@ func NewService(
 		identityRepo:          identityRepo,
 		refreshTokenRepo:      refreshTokenRepo,
 		emailVerificationRepo: emailVerificationRepo,
+		statsRepo:             statsRepo,
 		jwtManager:            jwtManager,
 		rbacService:           rbacService,
 		frontendURL:           frontendURL,
@@ -487,6 +493,10 @@ func (s *service) generateAuthResponse(ctx context.Context, user *domain.User, i
 		ExpiresIn:    int64(s.jwtManager.GetRefreshTokenDuration().Seconds()),
 		User:         user,
 	}, nil
+}
+
+func (s *service) GetUserStats(ctx context.Context, userID uuid.UUID) (*domain.UserStats, error) {
+	return s.statsRepo.GetUserStats(ctx, userID)
 }
 
 func hashToken(token string) []byte {

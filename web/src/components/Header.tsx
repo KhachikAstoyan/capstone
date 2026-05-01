@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { LogOut, Shield, User as UserIcon } from "lucide-react";
+import { LogOut, Shield, User as UserIcon, BarChart3 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { canManageProblems, getMyPermissions } from "@/lib/permissions";
 import { Button } from "@/components/ui/button";
@@ -121,6 +121,15 @@ export default function Header() {
                     @{user.handle}
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link
+                      to="/dashboard"
+                      className="flex cursor-pointer items-center gap-2"
+                    >
+                      <BarChart3 className="h-4 w-4" />
+                      Dashboard
+                    </Link>
+                  </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <Link
                       to="/users/$userRef"

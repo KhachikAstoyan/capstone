@@ -96,6 +96,41 @@ build-worker: | $(BUILD_DIR)
 	@CGO_ENABLED=$(CGO_ENABLED) $(GO) build $(GOFLAGS) -trimpath $(GO_LINKER_FLAGS) -o $(BUILD_DIR)/$(WORKER_BINARY) $(WORKER_BINARY_SRC)
 	@printf "$(OK_COLOR)✅ Worker binary built: $(BUILD_DIR)/$(WORKER_BINARY)$(NO_COLOR)\n"
 
+# Firecracker agent binary (cross-compiled for linux/amd64, runs inside VMs)
+FC_AGENT_BINARY := fc-agent
+FC_AGENT_SRC := ./cmd/fc-agent
+
+.PHONY: build-fc-agent
+build-fc-agent: | $(BUILD_DIR)
+	@printf "$(OK_COLOR)==> Building Firecracker in-VM agent (linux/amd64)$(NO_COLOR)\n"
+	@CGO_ENABLED=0 GOOS=linux GOARCH=amd64 $(GO) build -trimpath $(GO_LINKER_FLAGS) -o $(BUILD_DIR)/$(FC_AGENT_BINARY) $(FC_AGENT_SRC)
+	@printf "$(OK_COLOR)✅ fc-agent built: $(BUILD_DIR)/$(FC_AGENT_BINARY)$(NO_COLOR)\n"
+
+# Firecracker rootfs images (ext4) per language
+FC_ROOTFS_DIR ?= /var/lib/fc/rootfs
+FC_ROOTFS_SCRIPT := ./docker/firecracker/build-rootfs.sh
+
+.PHONY: build-rootfs-python build-rootfs-javascript build-rootfs-go build-rootfs-java build-rootfs-all
+
+build-rootfs-python:
+	@printf "$(OK_COLOR)==> Building Python rootfs$(NO_COLOR)\n"
+	@sudo bash $(FC_ROOTFS_SCRIPT) python $(FC_ROOTFS_DIR)
+
+build-rootfs-javascript:
+	@printf "$(OK_COLOR)==> Building JavaScript rootfs$(NO_COLOR)\n"
+	@sudo bash $(FC_ROOTFS_SCRIPT) javascript $(FC_ROOTFS_DIR)
+
+build-rootfs-go:
+	@printf "$(OK_COLOR)==> Building Go rootfs$(NO_COLOR)\n"
+	@sudo bash $(FC_ROOTFS_SCRIPT) go $(FC_ROOTFS_DIR)
+
+build-rootfs-java:
+	@printf "$(OK_COLOR)==> Building Java rootfs$(NO_COLOR)\n"
+	@sudo bash $(FC_ROOTFS_SCRIPT) java $(FC_ROOTFS_DIR)
+
+build-rootfs-all: build-rootfs-python build-rootfs-javascript build-rootfs-go build-rootfs-java
+	@printf "$(OK_COLOR)✅ All Firecracker rootfs images built in $(FC_ROOTFS_DIR)$(NO_COLOR)\n"
+
 .PHONY: build-email
 build-email: | $(BUILD_DIR)
 	@printf "$(OK_COLOR)==> Building Email worker binary$(NO_COLOR)\n"
