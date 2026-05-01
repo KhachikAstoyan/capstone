@@ -6,13 +6,13 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/go-chi/chi/v5"
-	"github.com/google/uuid"
 	"github.com/KhachikAstoyan/capstone/internal/api/common"
 	"github.com/KhachikAstoyan/capstone/internal/api/problems/access"
 	problemsservice "github.com/KhachikAstoyan/capstone/internal/api/problems/service"
 	"github.com/KhachikAstoyan/capstone/internal/api/tags/domain"
 	"github.com/KhachikAstoyan/capstone/internal/api/tags/service"
+	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
 )
 
 type Handler struct {

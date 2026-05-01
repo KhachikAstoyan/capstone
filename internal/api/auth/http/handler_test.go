@@ -20,13 +20,13 @@ import (
 )
 
 type mockService struct {
-	RegisterFunc     func(ctx context.Context, req service.RegisterRequest) (*service.RegisterResponse, error)
-	LoginFunc        func(ctx context.Context, req service.LoginRequest) (*service.AuthResponse, error)
-	RefreshTokenFunc func(ctx context.Context, refreshToken string) (*service.AuthResponse, error)
-	LogoutFunc       func(ctx context.Context, refreshToken string) error
-	VerifyEmailFunc func(ctx context.Context, token string) (service.VerifyEmailOutcome, error)
-	GetUserByIDFunc        func(ctx context.Context, userID uuid.UUID) (*domain.User, error)
-	GetPublicProfileFunc   func(ctx context.Context, userRef string) (*domain.PublicUserProfile, error)
+	RegisterFunc         func(ctx context.Context, req service.RegisterRequest) (*service.RegisterResponse, error)
+	LoginFunc            func(ctx context.Context, req service.LoginRequest) (*service.AuthResponse, error)
+	RefreshTokenFunc     func(ctx context.Context, refreshToken string) (*service.AuthResponse, error)
+	LogoutFunc           func(ctx context.Context, refreshToken string) error
+	VerifyEmailFunc      func(ctx context.Context, token string) (service.VerifyEmailOutcome, error)
+	GetUserByIDFunc      func(ctx context.Context, userID uuid.UUID) (*domain.User, error)
+	GetPublicProfileFunc func(ctx context.Context, userRef string) (*domain.PublicUserProfile, error)
 }
 
 func (m *mockService) Register(ctx context.Context, req service.RegisterRequest) (*service.RegisterResponse, error) {

@@ -12,8 +12,8 @@ import (
 )
 
 type OllamaModel struct {
-	baseURL   string
-	modelID   string
+	baseURL    string
+	modelID    string
 	httpClient *http.Client
 }
 
@@ -131,18 +131,18 @@ func (m *OllamaModel) buildRequest(messages []aiapi.Message, opts aiapi.CallOpti
 	}
 
 	return ollamaChatRequest{
-		Model:     m.modelID,
-		Messages:  msgs,
-		Stream:    false,
+		Model:      m.modelID,
+		Messages:   msgs,
+		Stream:     false,
 		NumPredict: maxTokens,
 	}
 }
 
 type ollamaChatRequest struct {
-	Model      string         `json:"model"`
+	Model      string          `json:"model"`
 	Messages   []ollamaMessage `json:"messages"`
-	Stream     bool           `json:"stream"`
-	NumPredict int            `json:"num_predict"`
+	Stream     bool            `json:"stream"`
+	NumPredict int             `json:"num_predict"`
 }
 
 type ollamaMessage struct {

@@ -4,8 +4,8 @@ import (
 	"context"
 	"database/sql"
 
-	"github.com/google/uuid"
 	"github.com/KhachikAstoyan/capstone/internal/api/tags/domain"
+	"github.com/google/uuid"
 )
 
 type Repository struct {

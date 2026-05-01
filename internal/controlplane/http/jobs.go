@@ -111,7 +111,8 @@ func (h *Handler) GetJobBySubmission(w http.ResponseWriter, r *http.Request) {
 //
 // Path param: jobID (UUID)
 // Response:   200 OK with domain.JobResult
-//             404 if the job has not completed yet or does not exist
+//
+//	404 if the job has not completed yet or does not exist
 func (h *Handler) GetJobResult(w http.ResponseWriter, r *http.Request) {
 	jobID, err := parseUUID(r, "jobID")
 	if err != nil {

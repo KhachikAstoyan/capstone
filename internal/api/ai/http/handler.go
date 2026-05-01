@@ -27,11 +27,11 @@ type ValidateCodeRequest struct {
 }
 
 type ValidationResponse struct {
-	ID           uuid.UUID             `json:"id"`
-	IsAllowed    bool                  `json:"is_allowed"`
-	Severity     domain.ValidationSeverity `json:"severity"`
-	Reason       *string               `json:"reason"`
-	CreatedAt    string                `json:"created_at"`
+	ID        uuid.UUID                 `json:"id"`
+	IsAllowed bool                      `json:"is_allowed"`
+	Severity  domain.ValidationSeverity `json:"severity"`
+	Reason    *string                   `json:"reason"`
+	CreatedAt string                    `json:"created_at"`
 }
 
 func (h *Handler) ValidateCode(w http.ResponseWriter, r *http.Request) {

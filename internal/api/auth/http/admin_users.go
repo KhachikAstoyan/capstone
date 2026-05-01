@@ -14,10 +14,10 @@ import (
 const adminPageSize = 20
 
 type adminUsersResponse struct {
-	Users  interface{} `json:"users"`
-	Total  int         `json:"total"`
-	Page   int         `json:"page"`
-	Limit  int         `json:"limit"`
+	Users interface{} `json:"users"`
+	Total int         `json:"total"`
+	Page  int         `json:"page"`
+	Limit int         `json:"limit"`
 }
 
 func (h *Handler) ListAdminUsers(w http.ResponseWriter, r *http.Request) {

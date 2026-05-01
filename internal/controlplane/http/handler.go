@@ -2,8 +2,8 @@
 //
 // Endpoints are split into two groups:
 //
-//   API-facing  — called by the main API service to submit jobs and query status
-//   Worker-facing — called by execution workers to register, poll, and report
+//	API-facing  — called by the main API service to submit jobs and query status
+//	Worker-facing — called by execution workers to register, poll, and report
 //
 // Authentication is handled by a simple shared-secret middleware (see
 // middleware.go).  Both caller types use the same key; a future iteration

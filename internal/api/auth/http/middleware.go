@@ -32,18 +32,18 @@ func AuthMiddleware(jwtManager *auth.JWTManager) func(http.Handler) http.Handler
 				return
 			}
 
-		token := parts[1]
-		claims, err := jwtManager.ValidateAccessToken(token)
-		if err != nil {
-			http.Error(w, "invalid or expired token", http.StatusUnauthorized)
-			return
-		}
+			token := parts[1]
+			claims, err := jwtManager.ValidateAccessToken(token)
+			if err != nil {
+				http.Error(w, "invalid or expired token", http.StatusUnauthorized)
+				return
+			}
 
-		ctx := context.WithValue(r.Context(), UserIDKey, claims.UserID)
-		ctx = context.WithValue(ctx, HandleKey, claims.Handle)
-		ctx = context.WithValue(ctx, PermissionsKey, claims.Permissions)
+			ctx := context.WithValue(r.Context(), UserIDKey, claims.UserID)
+			ctx = context.WithValue(ctx, HandleKey, claims.Handle)
+			ctx = context.WithValue(ctx, PermissionsKey, claims.Permissions)
 
-		next.ServeHTTP(w, r.WithContext(ctx))
+			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
 }

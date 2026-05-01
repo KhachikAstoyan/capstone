@@ -8,14 +8,14 @@ import (
 )
 
 type MockRoleRepository struct {
-	CreateRoleFunc              func(ctx context.Context, role *domain.Role) error
-	GetRoleByIDFunc             func(ctx context.Context, roleID uuid.UUID) (*domain.Role, error)
-	GetRoleByNameFunc           func(ctx context.Context, name string) (*domain.Role, error)
-	ListRolesFunc               func(ctx context.Context) ([]domain.Role, error)
-	UpdateRoleFunc              func(ctx context.Context, role *domain.Role) error
-	DeleteRoleFunc              func(ctx context.Context, roleID uuid.UUID) error
-	GetRoleWithPermissionsFunc  func(ctx context.Context, roleID uuid.UUID) (*domain.RoleWithPermissions, error)
-	GetRolePermissionsFunc      func(ctx context.Context, roleID uuid.UUID) ([]domain.Permission, error)
+	CreateRoleFunc             func(ctx context.Context, role *domain.Role) error
+	GetRoleByIDFunc            func(ctx context.Context, roleID uuid.UUID) (*domain.Role, error)
+	GetRoleByNameFunc          func(ctx context.Context, name string) (*domain.Role, error)
+	ListRolesFunc              func(ctx context.Context) ([]domain.Role, error)
+	UpdateRoleFunc             func(ctx context.Context, role *domain.Role) error
+	DeleteRoleFunc             func(ctx context.Context, roleID uuid.UUID) error
+	GetRoleWithPermissionsFunc func(ctx context.Context, roleID uuid.UUID) (*domain.RoleWithPermissions, error)
+	GetRolePermissionsFunc     func(ctx context.Context, roleID uuid.UUID) ([]domain.Permission, error)
 }
 
 func (m *MockRoleRepository) CreateRole(ctx context.Context, role *domain.Role) error {
@@ -75,12 +75,12 @@ func (m *MockRoleRepository) GetRolePermissions(ctx context.Context, roleID uuid
 }
 
 type MockPermissionRepository struct {
-	CreatePermissionFunc     func(ctx context.Context, permission *domain.Permission) error
-	GetPermissionByIDFunc    func(ctx context.Context, permissionID uuid.UUID) (*domain.Permission, error)
-	GetPermissionByKeyFunc   func(ctx context.Context, key string) (*domain.Permission, error)
-	ListPermissionsFunc      func(ctx context.Context) ([]domain.Permission, error)
-	UpdatePermissionFunc     func(ctx context.Context, permission *domain.Permission) error
-	DeletePermissionFunc     func(ctx context.Context, permissionID uuid.UUID) error
+	CreatePermissionFunc   func(ctx context.Context, permission *domain.Permission) error
+	GetPermissionByIDFunc  func(ctx context.Context, permissionID uuid.UUID) (*domain.Permission, error)
+	GetPermissionByKeyFunc func(ctx context.Context, key string) (*domain.Permission, error)
+	ListPermissionsFunc    func(ctx context.Context) ([]domain.Permission, error)
+	UpdatePermissionFunc   func(ctx context.Context, permission *domain.Permission) error
+	DeletePermissionFunc   func(ctx context.Context, permissionID uuid.UUID) error
 }
 
 func (m *MockPermissionRepository) CreatePermission(ctx context.Context, permission *domain.Permission) error {
@@ -126,12 +126,12 @@ func (m *MockPermissionRepository) DeletePermission(ctx context.Context, permiss
 }
 
 type MockUserRoleRepository struct {
-	AssignRoleToUserFunc           func(ctx context.Context, userRole *domain.UserRole) error
-	RemoveRoleFromUserFunc         func(ctx context.Context, userID, roleID uuid.UUID) error
-	GetUserRolesFunc               func(ctx context.Context, userID uuid.UUID) ([]domain.Role, error)
-	GetUserPermissionsFunc         func(ctx context.Context, userID uuid.UUID) ([]domain.Permission, error)
-	AssignPermissionToRoleFunc     func(ctx context.Context, rolePermission *domain.RolePermission) error
-	RemovePermissionFromRoleFunc   func(ctx context.Context, roleID, permissionID uuid.UUID) error
+	AssignRoleToUserFunc         func(ctx context.Context, userRole *domain.UserRole) error
+	RemoveRoleFromUserFunc       func(ctx context.Context, userID, roleID uuid.UUID) error
+	GetUserRolesFunc             func(ctx context.Context, userID uuid.UUID) ([]domain.Role, error)
+	GetUserPermissionsFunc       func(ctx context.Context, userID uuid.UUID) ([]domain.Permission, error)
+	AssignPermissionToRoleFunc   func(ctx context.Context, rolePermission *domain.RolePermission) error
+	RemovePermissionFromRoleFunc func(ctx context.Context, roleID, permissionID uuid.UUID) error
 }
 
 func (m *MockUserRoleRepository) AssignRoleToUser(ctx context.Context, userRole *domain.UserRole) error {

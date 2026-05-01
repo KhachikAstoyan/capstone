@@ -81,8 +81,8 @@ var DefaultLanguages = map[string]LangConfig{
 		RunnerFile:     "runner_go.py",
 		RunnerTemplate: goRunnerTemplate,
 		RunCmd:         []string{"python3", "/workspace/runner_go.py"},
-		PidsLimit: 256,
-		TmpfsOpts: "size=512m,exec",
+		PidsLimit:      256,
+		TmpfsOpts:      "size=512m,exec",
 	},
 	"java": {
 		Image:          "capstone-java-runner:latest",
@@ -90,8 +90,8 @@ var DefaultLanguages = map[string]LangConfig{
 		RunnerFile:     "runner_java.py",
 		RunnerTemplate: javaRunnerTemplate,
 		RunCmd:         []string{"python3", "/workspace/runner_java.py"},
-		PidsLimit: 256,
-		TmpfsOpts: "size=512m,exec",
+		PidsLimit:      256,
+		TmpfsOpts:      "size=512m,exec",
 	},
 }
 
@@ -316,7 +316,7 @@ func (e *DockerExecutor) runContainer(ctx context.Context, a *domain.Assignment,
 		SecurityOpt:    []string{"no-new-privileges"},
 		ReadonlyRootfs: true,
 		// Tmpfs lets the runner write to /tmp inside the read-only container.
-		Tmpfs: map[string]string{"/tmp": tmpfsOpts(lang)},
+		Tmpfs:       map[string]string{"/tmp": tmpfsOpts(lang)},
 		CapDrop:     []string{"ALL"},
 		NetworkMode: "none",
 		Runtime:     e.runtime,

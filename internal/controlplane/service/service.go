@@ -22,9 +22,9 @@ import (
 
 // Default durations — callers can override via Config.
 const (
-	DefaultLeaseDuration       = 60 * time.Second
-	DefaultLeaseCheckInterval  = 10 * time.Second
-	DefaultHeartbeatTimeout    = 30 * time.Second // workers offline after this
+	DefaultLeaseDuration      = 60 * time.Second
+	DefaultLeaseCheckInterval = 10 * time.Second
+	DefaultHeartbeatTimeout   = 30 * time.Second // workers offline after this
 )
 
 // Sentinel errors surfaced to HTTP handlers.
@@ -91,8 +91,8 @@ type Service interface {
 
 // Config holds tunables for the service.
 type Config struct {
-	LeaseDuration      time.Duration
-	HeartbeatTimeout   time.Duration
+	LeaseDuration    time.Duration
+	HeartbeatTimeout time.Duration
 }
 
 type service struct {

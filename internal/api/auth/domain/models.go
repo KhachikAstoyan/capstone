@@ -89,11 +89,11 @@ type EmailVerificationToken struct {
 }
 
 type UserStats struct {
-	TotalSolved      int                    `json:"total_solved"`
-	SolvedByDifficulty map[string]int        `json:"solved_by_difficulty"`
-	SolvedByTag      []TagStat              `json:"solved_by_tag"`
-	RecentSubmissions []RecentSubmission     `json:"recent_submissions"`
-	SubmissionStats  SubmissionStats        `json:"submission_stats"`
+	TotalSolved        int                `json:"total_solved"`
+	SolvedByDifficulty map[string]int     `json:"solved_by_difficulty"`
+	SolvedByTag        []TagStat          `json:"solved_by_tag"`
+	RecentSubmissions  []RecentSubmission `json:"recent_submissions"`
+	SubmissionStats    SubmissionStats    `json:"submission_stats"`
 }
 
 type TagStat struct {
@@ -113,9 +113,9 @@ type RecentSubmission struct {
 }
 
 type SubmissionStats struct {
-	TotalSubmissions int      `json:"total_submissions"`
-	TotalTestRuns    int      `json:"total_test_runs"`
-	AcceptanceRate   float64  `json:"acceptance_rate"`
+	TotalSubmissions  int            `json:"total_submissions"`
+	TotalTestRuns     int            `json:"total_test_runs"`
+	AcceptanceRate    float64        `json:"acceptance_rate"`
 	MostUsedLanguages []LanguageStat `json:"most_used_languages"`
 }
 

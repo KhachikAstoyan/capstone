@@ -13,12 +13,9 @@ import (
 	"time"
 
 	"github.com/KhachikAstoyan/capstone/internal/api"
+	aimodel "github.com/KhachikAstoyan/capstone/internal/api/ai"
 	airepo "github.com/KhachikAstoyan/capstone/internal/api/ai/repository"
 	aiservice "github.com/KhachikAstoyan/capstone/internal/api/ai/service"
-	aiapi "go.jetify.com/ai/api"
-	aimodel "github.com/KhachikAstoyan/capstone/internal/api/ai"
-	"go.jetify.com/ai/provider/anthropic"
-	"go.jetify.com/ai/provider/openai"
 	"github.com/KhachikAstoyan/capstone/internal/api/auth"
 	authhttp "github.com/KhachikAstoyan/capstone/internal/api/auth/http"
 	authrepo "github.com/KhachikAstoyan/capstone/internal/api/auth/repository"
@@ -47,6 +44,9 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
+	aiapi "go.jetify.com/ai/api"
+	"go.jetify.com/ai/provider/anthropic"
+	"go.jetify.com/ai/provider/openai"
 	"go.uber.org/zap"
 )
 

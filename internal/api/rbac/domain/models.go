@@ -42,11 +42,11 @@ type RoleWithPermissions struct {
 
 // UserWithRoles represents a user with their roles and permissions
 type UserWithRoles struct {
-	UserID      uuid.UUID              `json:"user_id"`
-	Roles       []Role                 `json:"roles"`
-	Permissions []Permission           `json:"permissions"`
-	RoleMap     map[string]Role        `json:"-"`
-	PermMap     map[string]Permission  `json:"-"`
+	UserID      uuid.UUID             `json:"user_id"`
+	Roles       []Role                `json:"roles"`
+	Permissions []Permission          `json:"permissions"`
+	RoleMap     map[string]Role       `json:"-"`
+	PermMap     map[string]Permission `json:"-"`
 }
 
 func (u *UserWithRoles) HasRole(roleName string) bool {
@@ -92,11 +92,11 @@ func (u *UserWithRoles) HasAllPermissions(permKeys ...string) bool {
 func (u *UserWithRoles) buildMaps() {
 	u.RoleMap = make(map[string]Role)
 	u.PermMap = make(map[string]Permission)
-	
+
 	for _, role := range u.Roles {
 		u.RoleMap[role.Name] = role
 	}
-	
+
 	for _, perm := range u.Permissions {
 		u.PermMap[perm.Key] = perm
 	}

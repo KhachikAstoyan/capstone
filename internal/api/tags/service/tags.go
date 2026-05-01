@@ -5,9 +5,9 @@ import (
 	"database/sql"
 	"errors"
 
-	"github.com/google/uuid"
 	"github.com/KhachikAstoyan/capstone/internal/api/tags/domain"
 	"github.com/KhachikAstoyan/capstone/internal/api/tags/repository"
+	"github.com/google/uuid"
 )
 
 type Service struct {

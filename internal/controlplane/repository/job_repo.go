@@ -17,9 +17,9 @@ import (
 
 // Sentinel errors returned by the job repository.
 var (
-	ErrJobNotFound      = errors.New("job not found")
-	ErrNoJobAvailable   = errors.New("no job available for the requested languages")
-	ErrLeaseMismatch    = errors.New("lease renewal rejected: worker_id does not match current holder")
+	ErrJobNotFound    = errors.New("job not found")
+	ErrNoJobAvailable = errors.New("no job available for the requested languages")
+	ErrLeaseMismatch  = errors.New("lease renewal rejected: worker_id does not match current holder")
 )
 
 // JobRepository defines all database operations on jobs.

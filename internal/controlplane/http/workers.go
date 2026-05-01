@@ -57,7 +57,8 @@ func (h *Handler) Heartbeat(w http.ResponseWriter, r *http.Request) {
 //
 // Request body: domain.PollRequest (JSON)
 // Response:     200 OK with domain.Assignment
-//               204 No Content when no jobs are available
+//
+//	204 No Content when no jobs are available
 func (h *Handler) PollJob(w http.ResponseWriter, r *http.Request) {
 	var req domain.PollRequest
 	if err := decodeJSON(r, &req); err != nil {

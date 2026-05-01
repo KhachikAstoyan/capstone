@@ -7,11 +7,11 @@ import (
 	"strings"
 
 	aidomain "github.com/KhachikAstoyan/capstone/internal/api/ai/domain"
+	problemsdomain "github.com/KhachikAstoyan/capstone/internal/api/problems/domain"
 	"github.com/KhachikAstoyan/capstone/internal/api/submissions/client"
 	"github.com/KhachikAstoyan/capstone/internal/api/submissions/domain"
 	"github.com/KhachikAstoyan/capstone/internal/api/submissions/driver"
 	"github.com/KhachikAstoyan/capstone/internal/api/submissions/repository"
-	problemsdomain "github.com/KhachikAstoyan/capstone/internal/api/problems/domain"
 	cpdomain "github.com/KhachikAstoyan/capstone/internal/controlplane/domain"
 	"github.com/google/uuid"
 )
@@ -45,10 +45,10 @@ type Service interface {
 }
 
 type service struct {
-	repo       repository.Repository
-	cpClient   client.Client
+	repo         repository.Repository
+	cpClient     client.Client
 	problemsRepo ProblemsReader
-	aiValidator AIValidator
+	aiValidator  AIValidator
 }
 
 func NewService(repo repository.Repository, cp client.Client, pr ProblemsReader, aiVal AIValidator) Service {

@@ -148,16 +148,16 @@ func TestComparePassword(t *testing.T) {
 
 func TestHashPasswordDeterminism(t *testing.T) {
 	password := "testPassword123"
-	
+
 	hash1, err := HashAndValidatePassword(password)
 	require.NoError(t, err)
-	
+
 	hash2, err := HashAndValidatePassword(password)
 	require.NoError(t, err)
-	
+
 	// Hashes should be different due to salt
 	assert.NotEqual(t, hash1, hash2)
-	
+
 	// But both should validate correctly
 	assert.NoError(t, ComparePassword(hash1, password))
 	assert.NoError(t, ComparePassword(hash2, password))

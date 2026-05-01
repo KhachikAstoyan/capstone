@@ -131,12 +131,12 @@ func (r *Repository) GetValidationBySubmission(ctx context.Context, submissionID
 
 func (r *Repository) LogValidationRequest(ctx context.Context, validationID uuid.UUID, requestBody, responseBody map[string]interface{}, errorMsg *string, tokensUsed, responseTime *int) (*domain.ValidationLog, error) {
 	log := &domain.ValidationLog{
-		ID:            uuid.New(),
-		ValidationID:  validationID,
-		RequestBody:   requestBody,
-		ResponseBody:  responseBody,
-		ErrorMessage:  errorMsg,
-		TokensUsed:    tokensUsed,
+		ID:             uuid.New(),
+		ValidationID:   validationID,
+		RequestBody:    requestBody,
+		ResponseBody:   responseBody,
+		ErrorMessage:   errorMsg,
+		TokensUsed:     tokensUsed,
 		ResponseTimeMs: responseTime,
 	}
 

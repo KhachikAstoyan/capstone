@@ -12,9 +12,10 @@ import (
 //
 // Route groups
 // ─────────────
-//   /v1/jobs         — API-service-facing: submit and query jobs
-//   /v1/workers      — Worker-facing: heartbeat and poll
-//   /v1/jobs/:id/…   — Worker-facing: lease management and result reporting
+//
+//	/v1/jobs         — API-service-facing: submit and query jobs
+//	/v1/workers      — Worker-facing: heartbeat and poll
+//	/v1/jobs/:id/…   — Worker-facing: lease management and result reporting
 //
 // All routes sit behind the internalKeyMiddleware (see main.go) so only
 // callers that present the correct X-Internal-Key header are accepted.

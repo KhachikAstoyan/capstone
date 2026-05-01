@@ -8,29 +8,29 @@ import (
 )
 
 type MockService struct {
-	CreateRoleFunc                 func(ctx context.Context, name string, description *string) (*domain.Role, error)
-	GetRoleFunc                    func(ctx context.Context, roleID uuid.UUID) (*domain.Role, error)
-	GetRoleByNameFunc              func(ctx context.Context, name string) (*domain.Role, error)
-	ListRolesFunc                  func(ctx context.Context) ([]domain.Role, error)
-	UpdateRoleFunc                 func(ctx context.Context, roleID uuid.UUID, name string, description *string) (*domain.Role, error)
-	DeleteRoleFunc                 func(ctx context.Context, roleID uuid.UUID) error
-	GetRoleWithPermissionsFunc     func(ctx context.Context, roleID uuid.UUID) (*domain.RoleWithPermissions, error)
-	GetRolePermissionsFunc         func(ctx context.Context, roleID uuid.UUID) ([]domain.Permission, error)
-	CreatePermissionFunc           func(ctx context.Context, key string, description *string) (*domain.Permission, error)
-	GetPermissionFunc              func(ctx context.Context, permissionID uuid.UUID) (*domain.Permission, error)
-	GetPermissionByKeyFunc         func(ctx context.Context, key string) (*domain.Permission, error)
-	ListPermissionsFunc            func(ctx context.Context) ([]domain.Permission, error)
-	UpdatePermissionFunc           func(ctx context.Context, permissionID uuid.UUID, key string, description *string) (*domain.Permission, error)
-	DeletePermissionFunc           func(ctx context.Context, permissionID uuid.UUID) error
-	AssignRoleToUserFunc           func(ctx context.Context, userID, roleID uuid.UUID, grantedBy *uuid.UUID) error
-	RemoveRoleFromUserFunc         func(ctx context.Context, userID, roleID uuid.UUID) error
-	GetUserRolesFunc               func(ctx context.Context, userID uuid.UUID) ([]domain.Role, error)
-	GetUserPermissionsFunc         func(ctx context.Context, userID uuid.UUID) ([]domain.Permission, error)
-	GetUserWithRolesFunc           func(ctx context.Context, userID uuid.UUID) (*domain.UserWithRoles, error)
-	AssignPermissionToRoleFunc     func(ctx context.Context, roleID, permissionID uuid.UUID) error
-	RemovePermissionFromRoleFunc   func(ctx context.Context, roleID, permissionID uuid.UUID) error
-	UserHasPermissionFunc          func(ctx context.Context, userID uuid.UUID, permissionKey string) (bool, error)
-	UserHasRoleFunc                func(ctx context.Context, userID uuid.UUID, roleName string) (bool, error)
+	CreateRoleFunc               func(ctx context.Context, name string, description *string) (*domain.Role, error)
+	GetRoleFunc                  func(ctx context.Context, roleID uuid.UUID) (*domain.Role, error)
+	GetRoleByNameFunc            func(ctx context.Context, name string) (*domain.Role, error)
+	ListRolesFunc                func(ctx context.Context) ([]domain.Role, error)
+	UpdateRoleFunc               func(ctx context.Context, roleID uuid.UUID, name string, description *string) (*domain.Role, error)
+	DeleteRoleFunc               func(ctx context.Context, roleID uuid.UUID) error
+	GetRoleWithPermissionsFunc   func(ctx context.Context, roleID uuid.UUID) (*domain.RoleWithPermissions, error)
+	GetRolePermissionsFunc       func(ctx context.Context, roleID uuid.UUID) ([]domain.Permission, error)
+	CreatePermissionFunc         func(ctx context.Context, key string, description *string) (*domain.Permission, error)
+	GetPermissionFunc            func(ctx context.Context, permissionID uuid.UUID) (*domain.Permission, error)
+	GetPermissionByKeyFunc       func(ctx context.Context, key string) (*domain.Permission, error)
+	ListPermissionsFunc          func(ctx context.Context) ([]domain.Permission, error)
+	UpdatePermissionFunc         func(ctx context.Context, permissionID uuid.UUID, key string, description *string) (*domain.Permission, error)
+	DeletePermissionFunc         func(ctx context.Context, permissionID uuid.UUID) error
+	AssignRoleToUserFunc         func(ctx context.Context, userID, roleID uuid.UUID, grantedBy *uuid.UUID) error
+	RemoveRoleFromUserFunc       func(ctx context.Context, userID, roleID uuid.UUID) error
+	GetUserRolesFunc             func(ctx context.Context, userID uuid.UUID) ([]domain.Role, error)
+	GetUserPermissionsFunc       func(ctx context.Context, userID uuid.UUID) ([]domain.Permission, error)
+	GetUserWithRolesFunc         func(ctx context.Context, userID uuid.UUID) (*domain.UserWithRoles, error)
+	AssignPermissionToRoleFunc   func(ctx context.Context, roleID, permissionID uuid.UUID) error
+	RemovePermissionFromRoleFunc func(ctx context.Context, roleID, permissionID uuid.UUID) error
+	UserHasPermissionFunc        func(ctx context.Context, userID uuid.UUID, permissionKey string) (bool, error)
+	UserHasRoleFunc              func(ctx context.Context, userID uuid.UUID, roleName string) (bool, error)
 }
 
 func (m *MockService) CreateRole(ctx context.Context, name string, description *string) (*domain.Role, error) {
