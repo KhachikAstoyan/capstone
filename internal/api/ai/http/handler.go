@@ -6,15 +6,17 @@ import (
 
 	"github.com/KhachikAstoyan/capstone/internal/api/ai/domain"
 	"github.com/KhachikAstoyan/capstone/internal/api/ai/service"
+	problemsservice "github.com/KhachikAstoyan/capstone/internal/api/problems/service"
 	"github.com/google/uuid"
 )
 
 type Handler struct {
-	svc *service.Service
+	svc         *service.Service
+	problemsSvc problemsservice.Service
 }
 
-func New(svc *service.Service) *Handler {
-	return &Handler{svc: svc}
+func New(svc *service.Service, problemsSvc problemsservice.Service) *Handler {
+	return &Handler{svc: svc, problemsSvc: problemsSvc}
 }
 
 type ValidateCodeRequest struct {
@@ -102,7 +104,13 @@ func (h *Handler) GetValidation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	validation, err := h.svc.GetValidationBySubmission(r.Context(), submissionID)
+	parsedSubmissionID, err := uuid.Parse(submissionID)
+	if err != nil {
+		http.Error(w, "Invalid submission_id", http.StatusBadRequest)
+		return
+	}
+
+	validation, err := h.svc.GetValidationBySubmission(r.Context(), parsedSubmissionID)
 	if err != nil {
 		http.Error(w, "Failed to get validation", http.StatusInternalServerError)
 		return

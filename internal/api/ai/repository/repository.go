@@ -129,6 +129,45 @@ func (r *Repository) GetValidationBySubmission(ctx context.Context, submissionID
 	return validation, nil
 }
 
+func (r *Repository) SaveHintMessage(ctx context.Context, userID, problemID uuid.UUID, role domain.ChatRole, content string) (*domain.ChatMessage, error) {
+	msg := &domain.ChatMessage{}
+	query := `
+		INSERT INTO hint_messages (user_id, problem_id, role, content)
+		VALUES ($1, $2, $3, $4)
+		RETURNING id, role, content, created_at
+	`
+	err := r.db.QueryRowContext(ctx, query, userID, problemID, string(role), content).Scan(
+		&msg.ID, &msg.Role, &msg.Content, &msg.CreatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("save hint message: %w", err)
+	}
+	return msg, nil
+}
+
+func (r *Repository) GetHintHistory(ctx context.Context, userID, problemID uuid.UUID) ([]domain.ChatMessage, error) {
+	query := `
+		SELECT id, role, content, created_at FROM hint_messages
+		WHERE user_id = $1 AND problem_id = $2
+		ORDER BY created_at ASC
+	`
+	rows, err := r.db.QueryContext(ctx, query, userID, problemID)
+	if err != nil {
+		return nil, fmt.Errorf("get hint history: %w", err)
+	}
+	defer rows.Close()
+
+	var msgs []domain.ChatMessage
+	for rows.Next() {
+		var msg domain.ChatMessage
+		if err := rows.Scan(&msg.ID, &msg.Role, &msg.Content, &msg.CreatedAt); err != nil {
+			return nil, fmt.Errorf("scan hint message: %w", err)
+		}
+		msgs = append(msgs, msg)
+	}
+	return msgs, rows.Err()
+}
+
 func (r *Repository) LogValidationRequest(ctx context.Context, validationID uuid.UUID, requestBody, responseBody map[string]interface{}, errorMsg *string, tokensUsed, responseTime *int) (*domain.ValidationLog, error) {
 	log := &domain.ValidationLog{
 		ID:             uuid.New(),

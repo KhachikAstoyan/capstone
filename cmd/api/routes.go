@@ -5,6 +5,7 @@ import (
 
 	"time"
 
+	aihttp "github.com/KhachikAstoyan/capstone/internal/api/ai/http"
 	"github.com/KhachikAstoyan/capstone/internal/api/auth"
 	authhttp "github.com/KhachikAstoyan/capstone/internal/api/auth/http"
 	languageshttp "github.com/KhachikAstoyan/capstone/internal/api/languages/http"
@@ -25,6 +26,7 @@ func setupRoutes(
 	tagsHandler *tagshttp.Handler,
 	languagesHandler *languageshttp.Handler,
 	submissionsHandler *submissionshttp.Handler,
+	aiHandler *aihttp.Handler,
 	jwtManager *auth.JWTManager,
 	rbacManager *rbac.Manager,
 ) http.Handler {
@@ -123,6 +125,13 @@ func setupRoutes(
 				r.With(rbacManager.RequirePermission(permissions.ProblemsManage)).Get("/", languagesHandler.ListLanguages)
 				r.With(rbacManager.RequirePermission(permissions.ProblemsManage)).Post("/", languagesHandler.CreateLanguage)
 			})
+
+			// Admin user management
+			r.Route("/internal/admin/users", func(r chi.Router) {
+				r.Use(rbacManager.RequirePermission(permissions.AdminAccess))
+				r.Get("/", authHandler.ListAdminUsers)
+				r.Get("/{userID}/security-events", authHandler.GetAdminUserSecurityEvents)
+			})
 		})
 
 		// Public problems routes (optional Bearer JWT for draft/archived visibility rules)
@@ -147,6 +156,10 @@ func setupRoutes(
 			r.With(apimiddleware.SubmissionRateLimit(15, 60*time.Second)).Post("/problems/{problemID}/run", submissionsHandler.Run)
 			r.Get("/submissions/{id}", submissionsHandler.GetSubmission)
 			r.Get("/submissions", submissionsHandler.ListSubmissions)
+
+			// AI hint routes
+			r.With(apimiddleware.SubmissionRateLimit(10, 60*time.Second)).Post("/problems/{problemID}/hint", aiHandler.GetHint)
+			r.Get("/problems/{problemID}/hint/history", aiHandler.GetHintHistory)
 		})
 	})
 

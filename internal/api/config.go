@@ -12,7 +12,7 @@ type Config struct {
 	config.CommonConfig
 
 	// API-specific configuration
-	ServerPort     int    `envconfig:"API_PORT" default:"8080"`
+	ServerPort     int    `envconfig:"API_PORT" default:"9090"`
 	ServerHost     string `envconfig:"API_HOST" default:"0.0.0.0"`
 	AllowedOrigins string `envconfig:"API_ALLOWED_ORIGINS" default:"*"`
 	SecureCookies  bool   `envconfig:"API_SECURE_COOKIES" default:"false"`
@@ -26,6 +26,8 @@ type Config struct {
 	RabbitMQExchange string `envconfig:"API_RABBITMQ_EXCHANGE" default:"capstone.events"`
 	// RabbitMQEmailVerificationRoutingKey is the routing key for verification messages.
 	RabbitMQEmailVerificationRoutingKey string `envconfig:"API_RABBITMQ_EMAIL_VERIFICATION_ROUTING_KEY" default:"email.verification"`
+	// RabbitMQJobsRoutingKey is the routing key for async job creation messages consumed by the control plane.
+	RabbitMQJobsRoutingKey string `envconfig:"API_RABBITMQ_JOBS_ROUTING_KEY" default:"jobs.create"`
 
 	DatabaseURL    string `envconfig:"API_DATABASE_URL" required:"true"`
 	MigrationsPath string `envconfig:"API_MIGRATIONS_PATH" default:"./internal/api/migrations"`

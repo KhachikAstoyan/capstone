@@ -1,0 +1,75 @@
+substitutions:
+  _REGION: us-central1
+  _REPOSITORY: capstone
+  _TAG: latest
+
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - -f
+      - docker/app/Dockerfile
+      - --build-arg
+      - SERVICE=api
+      - -t
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/capstone-api:${_TAG}
+      - .
+
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - -f
+      - docker/app/Dockerfile
+      - --build-arg
+      - SERVICE=control-plane
+      - -t
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/capstone-control-plane:${_TAG}
+      - .
+
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - -f
+      - docker/app/Dockerfile
+      - --build-arg
+      - SERVICE=email
+      - -t
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/capstone-email:${_TAG}
+      - .
+
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - -t
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/capstone-python-runner:${_TAG}
+      - docker/python-runner
+
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - -t
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/capstone-js-runner:${_TAG}
+      - docker/js-runner
+
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - -t
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/capstone-go-runner:${_TAG}
+      - docker/go-runner
+
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - -t
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/capstone-java-runner:${_TAG}
+      - docker/java-runner
+
+images:
+  - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/capstone-api:${_TAG}
+  - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/capstone-control-plane:${_TAG}
+  - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/capstone-email:${_TAG}
+  - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/capstone-python-runner:${_TAG}
+  - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/capstone-js-runner:${_TAG}
+  - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/capstone-go-runner:${_TAG}
+  - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/capstone-java-runner:${_TAG}

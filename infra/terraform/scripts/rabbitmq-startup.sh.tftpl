@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+exec > >(tee /var/log/capstone-rabbitmq-startup.log) 2>&1
+
+export DEBIAN_FRONTEND=noninteractive
+
+apt-get update
+apt-get install -y rabbitmq-server
+
+systemctl enable --now rabbitmq-server
+
+rabbitmqctl await_startup
+rabbitmqctl add_user '${rabbitmq_user}' '${rabbitmq_password}' || rabbitmqctl change_password '${rabbitmq_user}' '${rabbitmq_password}'
+rabbitmqctl set_permissions -p / '${rabbitmq_user}' '.*' '.*' '.*'
+rabbitmqctl delete_user guest || true
+
+systemctl restart rabbitmq-server

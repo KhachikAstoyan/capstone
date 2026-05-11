@@ -13,6 +13,7 @@ import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as UsersUserRefRouteImport } from './routes/users/$userRef'
 import { Route as ProblemsProblemSlugRouteImport } from './routes/problems/$problemSlug'
+import { Route as AdminUsersIndexRouteImport } from './routes/admin/users/index'
 import { Route as AdminProblemsIndexRouteImport } from './routes/admin/problems/index'
 import { Route as AdminProblemsProblemIdRouteImport } from './routes/admin/problems/$problemId'
 
@@ -36,6 +37,11 @@ const ProblemsProblemSlugRoute = ProblemsProblemSlugRouteImport.update({
   path: '/problems/$problemSlug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminUsersIndexRoute = AdminUsersIndexRouteImport.update({
+  id: '/admin/users/',
+  path: '/admin/users/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminProblemsIndexRoute = AdminProblemsIndexRouteImport.update({
   id: '/admin/problems/',
   path: '/admin/problems/',
@@ -54,6 +60,7 @@ export interface FileRoutesByFullPath {
   '/users/$userRef': typeof UsersUserRefRoute
   '/admin/problems/$problemId': typeof AdminProblemsProblemIdRoute
   '/admin/problems/': typeof AdminProblemsIndexRoute
+  '/admin/users/': typeof AdminUsersIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -62,6 +69,7 @@ export interface FileRoutesByTo {
   '/users/$userRef': typeof UsersUserRefRoute
   '/admin/problems/$problemId': typeof AdminProblemsProblemIdRoute
   '/admin/problems': typeof AdminProblemsIndexRoute
+  '/admin/users': typeof AdminUsersIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -71,6 +79,7 @@ export interface FileRoutesById {
   '/users/$userRef': typeof UsersUserRefRoute
   '/admin/problems/$problemId': typeof AdminProblemsProblemIdRoute
   '/admin/problems/': typeof AdminProblemsIndexRoute
+  '/admin/users/': typeof AdminUsersIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -81,6 +90,7 @@ export interface FileRouteTypes {
     | '/users/$userRef'
     | '/admin/problems/$problemId'
     | '/admin/problems/'
+    | '/admin/users/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -89,6 +99,7 @@ export interface FileRouteTypes {
     | '/users/$userRef'
     | '/admin/problems/$problemId'
     | '/admin/problems'
+    | '/admin/users'
   id:
     | '__root__'
     | '/'
@@ -97,6 +108,7 @@ export interface FileRouteTypes {
     | '/users/$userRef'
     | '/admin/problems/$problemId'
     | '/admin/problems/'
+    | '/admin/users/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -106,6 +118,7 @@ export interface RootRouteChildren {
   UsersUserRefRoute: typeof UsersUserRefRoute
   AdminProblemsProblemIdRoute: typeof AdminProblemsProblemIdRoute
   AdminProblemsIndexRoute: typeof AdminProblemsIndexRoute
+  AdminUsersIndexRoute: typeof AdminUsersIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -138,6 +151,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProblemsProblemSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/users/': {
+      id: '/admin/users/'
+      path: '/admin/users'
+      fullPath: '/admin/users/'
+      preLoaderRoute: typeof AdminUsersIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/problems/': {
       id: '/admin/problems/'
       path: '/admin/problems'
@@ -162,6 +182,7 @@ const rootRouteChildren: RootRouteChildren = {
   UsersUserRefRoute: UsersUserRefRoute,
   AdminProblemsProblemIdRoute: AdminProblemsProblemIdRoute,
   AdminProblemsIndexRoute: AdminProblemsIndexRoute,
+  AdminUsersIndexRoute: AdminUsersIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

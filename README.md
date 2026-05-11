@@ -49,7 +49,7 @@ and return per-testcase verdicts.
   ▼
 ┌─────────────────────┐        ┌────────────────────────────┐
 │   API Service       │──────▶│  Execution Control Plane   │
-│   :8000             │  HTTP  │  :9090                     │
+│   :9090             │  HTTP  │  :9091                     │
 │  (auth, problems,   │        │  (job queue, worker        │
 │   submissions)      │        │   registry, lease mgmt)****    │
 └─────────────────────┘        └────────────────────────────┘
@@ -76,7 +76,7 @@ and return per-testcase verdicts.
 | Binary          | Default port | Responsibility                                         |
 | --------------- | ------------ | ------------------------------------------------------ |
 | `api`           | 8000         | REST API — auth, problems, submissions, RBAC           |
-| `control-plane` | 9090         | Job queue, worker registry, lease management           |
+| `control-plane` | 9091         | Job queue, worker registry, lease management           |
 | `worker`        | —            | Polls control plane, runs user code in Docker          |
 | `email`         | —            | Consumes RabbitMQ events and sends verification emails |
 
@@ -194,7 +194,7 @@ immediately with a clear error message.
 | --------------------------------------------- | :------: | --------------------------- | ----------------------------------------------------------- |
 | `API_DATABASE_URL`                            |    ✅    | —                           | PostgreSQL DSN for the `capstone` database                  |
 | `JWT_SECRET`                                  |    ✅    | —                           | Secret used to sign and verify JWTs                         |
-| `API_PORT`                                    |          | `8080`                      | HTTP listen port                                            |
+| `API_PORT`                                    |          | `9090`                      | HTTP listen port                                            |
 | `API_HOST`                                    |          | `0.0.0.0`                   | HTTP listen address                                         |
 | `API_ALLOWED_ORIGINS`                         |          | `*`                         | Comma-separated CORS origins (e.g. `http://localhost:5173`) |
 | `API_SECURE_COOKIES`                          |          | `false`                     | Set `true` in production (requires HTTPS)                   |
@@ -214,7 +214,7 @@ immediately with a clear error message.
 | Variable                       | Required | Default                              | Description                                                                                                                                                           |
 | ------------------------------ | :------: | ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `CP_DATABASE_URL`              |    ✅    | —                                    | PostgreSQL DSN for the `capstone_cp` database                                                                                                                         |
-| `CP_PORT`                      |          | `9090`                               | HTTP listen port                                                                                                                                                      |
+| `CP_PORT`                      |          | `9091`                               | HTTP listen port                                                                                                                                                      |
 | `CP_HOST`                      |          | `0.0.0.0`                            | HTTP listen address                                                                                                                                                   |
 | `CP_INTERNAL_KEY`              |          | —                                    | Shared secret checked in the `X-Internal-Key` request header. **If unset, all requests are accepted without auth** (development only — always set this in production) |
 | `CP_MIGRATIONS_PATH`           |          | `./internal/controlplane/migrations` | Path to SQL migration files                                                                                                                                           |
@@ -230,7 +230,7 @@ immediately with a clear error message.
 
 | Variable                            | Required | Default       | Description                                                                                                              |
 | ----------------------------------- | :------: | ------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| `WORKER_CP_URL`                     |    ✅    | —             | Base URL of the Control Plane (e.g. `http://localhost:9090`)                                                             |
+| `WORKER_CP_URL`                     |    ✅    | —             | Base URL of the Control Plane (e.g. `http://localhost:9091`)                                                             |
 | `WORKER_CP_KEY`                     |          | —             | Must match `CP_INTERNAL_KEY` when auth is enabled                                                                        |
 | `WORKER_LANGUAGES`                  |          | `python,javascript,go` | Comma-separated languages this worker supports. Supported values: `python`, `javascript`, `go`                         |
 | `WORKER_CAPACITY`                   |          | `1`           | Maximum concurrent jobs                                                                                                  |
@@ -282,7 +282,7 @@ export EMAIL_RABBITMQ_URL="amqp://guest:guest@localhost:5672/"
 
 # ── Execution Control Plane ──────────────────────────────────────────────────
 export CP_DATABASE_URL="postgresql://capstone:capstone@localhost:5432/capstone_cp?sslmode=disable"
-export CP_PORT="9090"
+export CP_PORT="9091"
 export CP_INTERNAL_KEY="dev-internal-key"   # ← replace in production
 export CP_LEASE_DURATION_SEC="60"
 export CP_LEASE_CHECK_INTERVAL_SEC="10"
@@ -290,7 +290,7 @@ export CP_HEARTBEAT_TIMEOUT_SEC="30"
 export CP_WORKER_SWEEP_INTERVAL_SEC="15"
 
 # ── Execution Worker ──────────────────────────────────────────────────────────
-export WORKER_CP_URL="http://localhost:9090"
+export WORKER_CP_URL="http://localhost:9091"
 export WORKER_CP_KEY="dev-internal-key"     # ← must match CP_INTERNAL_KEY
 export WORKER_LANGUAGES="python,javascript,go"
 export WORKER_ALLOW_STUB_EXECUTOR="false"
@@ -391,7 +391,7 @@ First run applies all migrations to `capstone_cp`. Logs confirm:
 `"migrations complete"` and `"control plane ready"`.
 
 ```bash
-curl http://localhost:9090/healthz    # → "ok"
+curl http://localhost:9091/healthz    # → "ok"
 ```
 
 ### Execution Worker

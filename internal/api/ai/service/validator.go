@@ -29,6 +29,7 @@ FORBIDDEN - block immediately if code contains ANY of:
 
 ALLOWED - only code that:
 - Performs algorithmic computation (sorting, searching, math, string manipulation, etc.)
+- Or doesn't perform any actions - empty functions should not be rejected
 - Writes to stdout/return values
 - Uses standard safe library functions (math operations, string operations, basic data structures)
 
@@ -44,7 +45,7 @@ You must respond ONLY with valid JSON in this exact format:
 }
 
 Rules:
-- is_allowed: true ONLY if code contains NO forbidden patterns and performs only algorithmic problem-solving
+- is_allowed: true ONLY if code contains NO forbidden patterns that could be used to bypass the sandboxed environment or perform malicious actions
 - severity: "block" if is_allowed=false, "warn" if minor concerns but allowed, "info" if allowed with notes
 - reason: concise explanation. If violations found, state them clearly. NO suggestions to user.
 - If violations are detected, is_allowed MUST be false with severity "block"
@@ -210,4 +211,83 @@ func (s *Service) GetValidationBySubmission(ctx context.Context, submissionID uu
 		return nil, err
 	}
 	return validation, nil
+}
+
+const hintSystemPrompt = `You are a Socratic programming tutor for a competitive programming platform.
+Help the user understand how to solve the problem through leading questions and small directional nudges.
+
+STRICT RULES:
+- NEVER provide a complete or near-complete solution in any language.
+- NEVER write more than 3-4 lines of code in any single response.
+- NEVER directly give the algorithm — instead ask questions that lead the user to discover it.
+- You MAY point out a specific bug in the user's code if they are clearly stuck on a mistake (e.g., off-by-one, wrong comparison).
+- You MAY explain a general concept (e.g., "two-pointer technique") without applying it to this problem's solution.
+- Keep responses concise: 2-5 sentences or 1-2 short bullet points.
+- Be encouraging but honest.
+- If the user asks for the full answer or full solution, refuse and redirect with a hint instead.
+
+You will be given the problem statement and the user's current code before the conversation history.`
+
+func (s *Service) GetHint(ctx context.Context, req domain.HintRequest) (*domain.HintResponse, error) {
+	history, err := s.repo.GetHintHistory(ctx, req.UserID, req.ProblemID)
+	if err != nil {
+		return nil, fmt.Errorf("load hint history: %w", err)
+	}
+
+	userMsg, err := s.repo.SaveHintMessage(ctx, req.UserID, req.ProblemID, domain.ChatRoleUser, req.Message)
+	if err != nil {
+		return nil, fmt.Errorf("save user hint message: %w", err)
+	}
+
+	contextText := fmt.Sprintf("Problem statement:\n%s\n\nUser's current code (%s):\n```\n%s\n```",
+		req.ProblemStatement, req.LanguageKey, req.Code)
+
+	messages := []aiapi.Message{
+		&aiapi.SystemMessage{Content: hintSystemPrompt},
+		&aiapi.UserMessage{Content: []aiapi.ContentBlock{&aiapi.TextBlock{Text: contextText}}},
+		&aiapi.AssistantMessage{Content: []aiapi.ContentBlock{&aiapi.TextBlock{Text: "Understood. I have the problem and your code. Ask me for a hint whenever you're ready."}}},
+	}
+
+	for _, msg := range history {
+		switch msg.Role {
+		case domain.ChatRoleUser:
+			messages = append(messages, &aiapi.UserMessage{
+				Content: []aiapi.ContentBlock{&aiapi.TextBlock{Text: msg.Content}},
+			})
+		case domain.ChatRoleAssistant:
+			messages = append(messages, &aiapi.AssistantMessage{
+				Content: []aiapi.ContentBlock{&aiapi.TextBlock{Text: msg.Content}},
+			})
+		}
+	}
+
+	messages = append(messages, &aiapi.UserMessage{
+		Content: []aiapi.ContentBlock{&aiapi.TextBlock{Text: req.Message}},
+	})
+
+	resp, err := ai.GenerateText(ctx, messages, ai.WithModel(s.model), ai.WithMaxOutputTokens(512))
+	if err != nil {
+		return nil, fmt.Errorf("hint AI call: %w", err)
+	}
+
+	text := ""
+	if len(resp.Content) > 0 {
+		if tb, ok := resp.Content[0].(*aiapi.TextBlock); ok {
+			text = tb.Text
+		}
+	}
+
+	assistantMsg, err := s.repo.SaveHintMessage(ctx, req.UserID, req.ProblemID, domain.ChatRoleAssistant, text)
+	if err != nil {
+		return nil, fmt.Errorf("save assistant hint message: %w", err)
+	}
+
+	return &domain.HintResponse{
+		UserMessage:      *userMsg,
+		AssistantMessage: *assistantMsg,
+	}, nil
+}
+
+func (s *Service) GetHintHistory(ctx context.Context, userID, problemID uuid.UUID) ([]domain.ChatMessage, error) {
+	return s.repo.GetHintHistory(ctx, userID, problemID)
 }

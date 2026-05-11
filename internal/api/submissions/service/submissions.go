@@ -16,6 +16,11 @@ import (
 	"github.com/google/uuid"
 )
 
+// JobPublisher publishes job creation requests asynchronously via RabbitMQ.
+type JobPublisher interface {
+	PublishJobCreation(ctx context.Context, req cpdomain.CreateJobRequest) error
+}
+
 var (
 	ErrForbidden          = errors.New("access denied")
 	ErrNoTestCases        = errors.New("problem has no active test cases")
@@ -47,12 +52,13 @@ type Service interface {
 type service struct {
 	repo         repository.Repository
 	cpClient     client.Client
+	jobPublisher JobPublisher
 	problemsRepo ProblemsReader
 	aiValidator  AIValidator
 }
 
-func NewService(repo repository.Repository, cp client.Client, pr ProblemsReader, aiVal AIValidator) Service {
-	return &service{repo: repo, cpClient: cp, problemsRepo: pr, aiValidator: aiVal}
+func NewService(repo repository.Repository, cp client.Client, jobPub JobPublisher, pr ProblemsReader, aiVal AIValidator) Service {
+	return &service{repo: repo, cpClient: cp, jobPublisher: jobPub, problemsRepo: pr, aiValidator: aiVal}
 }
 
 func (s *service) Submit(ctx context.Context, userID, problemID uuid.UUID, req domain.CreateSubmissionRequest) (*domain.Submission, error) {
@@ -159,23 +165,19 @@ func (s *service) create(ctx context.Context, userID, problemID uuid.UUID, req d
 		}
 	}
 
-	job, err := s.cpClient.CreateJob(ctx, cpdomain.CreateJobRequest{
+	if err := s.jobPublisher.PublishJobCreation(ctx, cpdomain.CreateJobRequest{
 		SubmissionID:  sub.ID,
 		Language:      langKey,
 		SourceText:    &sourceToSend,
 		TimeLimitMs:   problem.TimeLimitMs,
 		MemoryLimitMb: problem.MemoryLimitMb,
 		TestCases:     cpTestCases,
-	})
-	if err != nil {
+	}); err != nil {
 		_ = s.repo.UpdateStatus(ctx, sub.ID, domain.StatusInternalError)
 		return nil, err
 	}
 
-	_ = s.repo.UpdateCPJobID(ctx, sub.ID, job.ID)
 	_ = s.repo.UpdateStatus(ctx, sub.ID, domain.StatusQueued)
-
-	sub.CPJobID = &job.ID
 	sub.Status = domain.StatusQueued
 
 	return sub, nil
@@ -200,11 +202,6 @@ func (s *service) GetSubmission(ctx context.Context, id, callerUserID uuid.UUID,
 			s.enrichResult(ctx, sub.ProblemID, result)
 		}
 		sub.Result = result
-		s.attachValidation(ctx, sub)
-		return sub, nil
-	}
-
-	if sub.CPJobID == nil {
 		s.attachValidation(ctx, sub)
 		return sub, nil
 	}

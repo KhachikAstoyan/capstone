@@ -142,7 +142,7 @@ Set these in the worker's environment (or `.env` file):
 Minimal `.env` for Firecracker mode:
 
 ```env
-WORKER_CP_URL=http://localhost:9090
+WORKER_CP_URL=http://localhost:9091
 WORKER_EXECUTOR=firecracker
 WORKER_LANGUAGES=python,javascript,go,java
 WORKER_CAPACITY=4
@@ -157,7 +157,7 @@ WORKER_CAPACITY=4
 GOOS=linux GOARCH=amd64 make build-worker
 
 # Run with Firecracker executor
-WORKER_CP_URL=http://localhost:9090 \
+WORKER_CP_URL=http://localhost:9091 \
 WORKER_EXECUTOR=firecracker \
 WORKER_LANGUAGES=python \
 WORKER_CAPACITY=1 \

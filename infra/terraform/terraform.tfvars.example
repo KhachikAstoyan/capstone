@@ -1,0 +1,24 @@
+project_id = "your-gcp-project-id"
+region     = "us-central1"
+zone       = "us-central1-a"
+
+image_tag           = "latest"
+worker_artifact_uri = "gs://your-deploy-bucket/capstone-worker-linux-amd64.tar.gz"
+
+# First apply can use the placeholder. After Firebase deploy, set this to the
+# real https://<project-id>.web.app or https://<site-id>.web.app URL and apply again.
+frontend_url    = "https://your-gcp-project-id.web.app"
+allowed_origins = "https://your-gcp-project-id.web.app"
+
+api_ai_provider = "anthropic"
+api_ai_model    = "claude-opus-4-1"
+api_ai_api_key  = "replace-me"
+
+smtp_host     = "smtp.gmail.com"
+smtp_port     = 587
+smtp_username = "replace-me"
+smtp_password = "replace-me"
+smtp_from     = "Capstone <no-reply@example.com>"
+
+worker_docker_runtime = "runc"
+enable_gvisor         = false

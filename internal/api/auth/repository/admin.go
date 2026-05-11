@@ -77,8 +77,9 @@ func (r *userRepository) GetUserSecurityEvents(ctx context.Context, userID uuid.
 	}
 
 	const listQ = `
-		SELECT se.id, se.submission_id, se.category, se.severity, se.detail_json, se.created_at
+		SELECT se.id, se.submission_id, se.category, se.severity, se.detail_json, sub.source_text, se.created_at
 		FROM security_events se
+		LEFT JOIN submissions sub ON sub.id = se.submission_id
 		WHERE se.submission_id IN (SELECT id FROM submissions WHERE user_id = $1)
 		ORDER BY se.created_at DESC
 		LIMIT $2 OFFSET $3`
@@ -93,7 +94,7 @@ func (r *userRepository) GetUserSecurityEvents(ctx context.Context, userID uuid.
 	for rows.Next() {
 		var e domain.SecurityEvent
 		var detailRaw []byte
-		if err := rows.Scan(&e.ID, &e.SubmissionID, &e.Category, &e.Severity, &detailRaw, &e.CreatedAt); err != nil {
+		if err := rows.Scan(&e.ID, &e.SubmissionID, &e.Category, &e.Severity, &detailRaw, &e.SourceText, &e.CreatedAt); err != nil {
 			return nil, 0, fmt.Errorf("scan security event: %w", err)
 		}
 		if len(detailRaw) > 0 {

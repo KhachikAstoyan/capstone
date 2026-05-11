@@ -161,7 +161,6 @@ function DetailsForm({
   const [statement, setStatement] = useState(problem.statement_markdown);
   const [timeLimit, setTimeLimit] = useState(String(problem.time_limit_ms));
   const [memoryLimit, setMemoryLimit] = useState(String(problem.memory_limit_mb));
-  const [testsRef, setTestsRef] = useState(problem.tests_ref ?? "");
   const [visibility, setVisibility] = useState<Visibility>(problem.visibility);
   const [difficulty, setDifficulty] = useState<Difficulty>(problem.difficulty);
   const [submitting, setSubmitting] = useState(false);
@@ -262,7 +261,6 @@ function DetailsForm({
       statement_markdown: statement,
       time_limit_ms: Math.floor(time),
       memory_limit_mb: Math.floor(mem),
-      ...(testsRef.trim() ? { tests_ref: testsRef.trim() } : {}),
       visibility,
       difficulty,
       function_spec,
@@ -326,15 +324,7 @@ function DetailsForm({
         </div>
       </div>
 
-      <div className="grid gap-2">
-        <Label htmlFor="ep-tests">Tests reference (optional)</Label>
-        <Input
-          id="ep-tests"
-          value={testsRef}
-          onChange={(e) => setTestsRef(e.target.value)}
-          placeholder="s3://bucket/tests/my-problem"
-        />
-      </div>
+
 
       {/* Tags */}
       <div className="grid gap-2">

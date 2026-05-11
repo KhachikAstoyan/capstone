@@ -11,7 +11,7 @@ The header is a sticky top bar with three sections: logo (left), search input (l
 Create a `.env.local` file in `capstone-code/web/` (copy from `.env.example`):
 
 ```
-VITE_API_URL=http://localhost:8080/api/v1
+VITE_API_URL=http://localhost:9090/api/v1
 ```
 
 The API client reads `import.meta.env.VITE_API_URL` at runtime. If unset it falls back to `/api/v1` (same-origin, useful when the Go server serves the frontend in production).

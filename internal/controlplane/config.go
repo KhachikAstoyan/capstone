@@ -17,7 +17,7 @@ type Config struct {
 
 	// ── HTTP server ───────────────────────────────────────────────────────────
 	ServerHost string `envconfig:"CP_HOST" default:"0.0.0.0"`
-	ServerPort int    `envconfig:"CP_PORT" default:"9090"`
+	ServerPort int    `envconfig:"CP_PORT" default:"9091"`
 
 	// ── Database ─────────────────────────────────────────────────────────────
 	// This is the control plane's own PostgreSQL database — separate from the
@@ -30,6 +30,14 @@ type Config struct {
 	// X-Internal-Key request header.  If empty, authentication is skipped
 	// (development mode only — never leave this empty in production).
 	InternalKey string `envconfig:"CP_INTERNAL_KEY"`
+
+	// ── RabbitMQ (async job intake) ───────────────────────────────────────────
+	// If CP_RABBITMQ_URL is empty the control plane falls back to HTTP-only mode
+	// (no async job intake; jobs must be created via POST /v1/jobs directly).
+	RabbitMQURL      string `envconfig:"CP_RABBITMQ_URL"`
+	RabbitMQExchange string `envconfig:"CP_RABBITMQ_EXCHANGE"          default:"capstone.events"`
+	RabbitMQJobsQueue      string `envconfig:"CP_RABBITMQ_JOBS_QUEUE"      default:"cp.jobs.create"`
+	RabbitMQJobsRoutingKey string `envconfig:"CP_RABBITMQ_JOBS_ROUTING_KEY" default:"jobs.create"`
 
 	// ── Lease / scheduling ───────────────────────────────────────────────────
 	// How long a worker has to complete (or renew) a job before it is requeued.

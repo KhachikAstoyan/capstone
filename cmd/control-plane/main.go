@@ -2,7 +2,7 @@
 //
 // # Responsibilities
 //
-//   - Accept job creation requests from the main API service.
+//   - Receive job creation requests from the API service via RabbitMQ.
 //   - Register workers and track their health via heartbeat calls.
 //   - Assign queued jobs to workers using a worker-pull model with leases.
 //   - Store execution results reported by workers.
@@ -11,20 +11,26 @@
 // # Architecture
 //
 // The control plane has its own PostgreSQL database (CP_DATABASE_URL).
-// It does NOT share a database with the API service.  Communication between
-// the two services is entirely over HTTP.
+// It does NOT share a database with the API service.
 //
-//	API service ──POST /v1/jobs──────────────► Control Plane
-//	                                                │
-//	Workers ──POST /v1/workers/heartbeat──────────► │
-//	Workers ──POST /v1/workers/poll───────────────► │
-//	Workers ──POST /v1/jobs/{id}/running──────────► │
-//	Workers ──POST /v1/jobs/{id}/lease────────────► │
-//	Workers ──POST /v1/jobs/{id}/result───────────► │
+// Job creation is asynchronous: the API service publishes a CreateJobRequest
+// JSON message to RabbitMQ (routing key: jobs.create).  The control plane
+// consumes from the cp.jobs.create queue and inserts the job into its DB.
+// All other communication (status polling, result fetching) remains HTTP.
+//
+//	API service ──publish jobs.create──► RabbitMQ ──► Control Plane consumer
+//	API service ──GET /v1/jobs/by-submission/{id}───► Control Plane HTTP
+//	API service ──GET /v1/jobs/{id}/result──────────► Control Plane HTTP
+//	                                                        │
+//	Workers ──POST /v1/workers/heartbeat──────────────────► │
+//	Workers ──POST /v1/workers/poll───────────────────────► │
+//	Workers ──POST /v1/jobs/{id}/running──────────────────► │
+//	Workers ──POST /v1/jobs/{id}/lease────────────────────► │
+//	Workers ──POST /v1/jobs/{id}/result───────────────────► │
 //
 // # Authentication
 //
-// Every request must carry X-Internal-Key: <CP_INTERNAL_KEY>.
+// Every HTTP request must carry X-Internal-Key: <CP_INTERNAL_KEY>.
 // If CP_INTERNAL_KEY is unset the check is skipped (development only).
 package main
 
@@ -40,12 +46,14 @@ import (
 	"time"
 
 	controlplane "github.com/KhachikAstoyan/capstone/internal/controlplane"
+	"github.com/KhachikAstoyan/capstone/internal/controlplane/consumer"
 	cphttp "github.com/KhachikAstoyan/capstone/internal/controlplane/http"
 	"github.com/KhachikAstoyan/capstone/internal/controlplane/repository"
 	"github.com/KhachikAstoyan/capstone/internal/controlplane/service"
 	"github.com/KhachikAstoyan/capstone/pkg/database"
 	"github.com/KhachikAstoyan/capstone/pkg/logger"
 	"github.com/KhachikAstoyan/capstone/pkg/migrations"
+	"github.com/KhachikAstoyan/capstone/pkg/rabbitmq"
 	"github.com/go-chi/chi/v5"
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
 	"go.uber.org/zap"
@@ -94,6 +102,37 @@ func main() {
 		LeaseDuration:    cfg.LeaseDuration(),
 		HeartbeatTimeout: cfg.HeartbeatTimeout(),
 	}, log)
+
+	// ── RabbitMQ job consumer ─────────────────────────────────────────────────
+	if cfg.RabbitMQURL != "" {
+		jobConsumer, err := consumer.NewJobConsumer(rabbitmq.ConsumerConfig{
+			URL:         cfg.RabbitMQURL,
+			Exchange:    cfg.RabbitMQExchange,
+			Queue:       cfg.RabbitMQJobsQueue,
+			RoutingKey:  cfg.RabbitMQJobsRoutingKey,
+			ConsumerTag: "control-plane-jobs",
+		}, svc, log)
+		if err != nil {
+			log.Fatal("failed to create job consumer", zap.Error(err))
+		}
+		defer func() {
+			if err := jobConsumer.Close(); err != nil {
+				log.Error("job consumer close", zap.Error(err))
+			}
+		}()
+		go func() {
+			if err := jobConsumer.Run(ctx); err != nil && !errors.Is(err, context.Canceled) {
+				log.Error("job consumer stopped", zap.Error(err))
+			}
+		}()
+		log.Info("RabbitMQ job consumer ready",
+			zap.String("exchange", cfg.RabbitMQExchange),
+			zap.String("queue", cfg.RabbitMQJobsQueue),
+			zap.String("routing_key", cfg.RabbitMQJobsRoutingKey),
+		)
+	} else {
+		log.Warn("CP_RABBITMQ_URL not set — async job intake disabled; falling back to HTTP-only mode")
+	}
 
 	// ── HTTP handler + router ─────────────────────────────────────────────────
 	handler := cphttp.NewHandler(svc)

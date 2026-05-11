@@ -654,7 +654,6 @@ function CreateProblemDialog({
   const [statement, setStatement] = useState("");
   const [timeLimit, setTimeLimit] = useState("1000");
   const [memoryLimit, setMemoryLimit] = useState("256");
-  const [testsRef, setTestsRef] = useState("");
   const [visibility, setVisibility] = useState<Visibility>("draft");
   const [difficulty, setDifficulty] = useState<Difficulty>("easy");
   const [submitting, setSubmitting] = useState(false);
@@ -699,7 +698,6 @@ function CreateProblemDialog({
       setStatement("");
       setTimeLimit("1000");
       setMemoryLimit("256");
-      setTestsRef("");
       setVisibility("draft");
       setDifficulty("easy");
       setSelectedTags([]);
@@ -831,7 +829,6 @@ function CreateProblemDialog({
       statement_markdown: statement,
       time_limit_ms: Math.floor(time),
       memory_limit_mb: Math.floor(mem),
-      ...(testsRef.trim() ? { tests_ref: testsRef.trim() } : {}),
       visibility,
       difficulty,
       function_spec,
@@ -990,17 +987,6 @@ function CreateProblemDialog({
                 required
               />
             </div>
-          </div>
-
-          <div className="grid gap-2">
-            <Label htmlFor="cp-tests">Tests reference</Label>
-            <Input
-              id="cp-tests"
-              value={testsRef}
-              onChange={(e) => setTestsRef(e.target.value)}
-              placeholder="s3://bucket/tests/my-problem"
-              required
-            />
           </div>
 
           <div className="grid gap-2">

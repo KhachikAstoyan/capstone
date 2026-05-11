@@ -70,7 +70,7 @@ See [config-structure.md](config-structure.md) for detailed architecture.
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `API_PORT` | HTTP server port | `8080` |
+| `API_PORT` | HTTP server port | `9090` |
 | `API_HOST` | HTTP server host | `0.0.0.0` |
 | `API_ALLOWED_ORIGINS` | CORS origins | `*` |
 

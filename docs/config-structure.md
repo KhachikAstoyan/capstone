@@ -133,7 +133,7 @@ Now both API and Worker automatically have access to `cfg.RedisURL`!
 type Config struct {
     config.CommonConfig
     
-    ServerPort     int    `envconfig:"API_PORT" default:"8080"`
+    ServerPort     int    `envconfig:"API_PORT" default:"9090"`
     
     // NEW: Add rate limiting
     RateLimitRPS   int    `envconfig:"API_RATE_LIMIT_RPS" default:"100"`

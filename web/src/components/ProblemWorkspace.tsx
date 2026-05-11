@@ -17,6 +17,7 @@ import {
 import Editor, { type BeforeMount, type OnMount } from "@monaco-editor/react";
 import { toast } from "sonner";
 import { SubmissionsTab } from "@/components/SubmissionsTab";
+import { HintChat } from "@/components/HintChat";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -957,6 +958,12 @@ export function ProblemWorkspace({ problem }: { problem: Problem }) {
                   >
                     Submissions
                   </TabsTrigger>
+                  <TabsTrigger
+                    value="hints"
+                    className="px-0 text-xs font-medium"
+                  >
+                    Hints
+                  </TabsTrigger>
                 </TabsList>
               </div>
 
@@ -978,6 +985,17 @@ export function ProblemWorkspace({ problem }: { problem: Problem }) {
                 className="mt-0 min-h-0 flex-1 overflow-hidden p-0 data-[state=inactive]:hidden"
               >
                 <SubmissionsTab problemId={problem.id} />
+              </TabsContent>
+
+              <TabsContent
+                value="hints"
+                className="mt-0 min-h-0 flex-1 overflow-hidden p-0 data-[state=inactive]:hidden"
+              >
+                <HintChat
+                  problemId={problem.id}
+                  code={code}
+                  languageKey={language}
+                />
               </TabsContent>
             </Tabs>
           </div>

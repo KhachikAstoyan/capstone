@@ -14,6 +14,7 @@ type MockUserRepository struct {
 	GetUserByHandleFunc    func(ctx context.Context, handle string) (*domain.User, error)
 	GetUserByEmailFunc     func(ctx context.Context, email string) (*domain.User, error)
 	ListSolvedProblemsFunc func(ctx context.Context, userID uuid.UUID) ([]domain.PublicSolvedProblem, error)
+	GetSecurityEventsFunc  func(ctx context.Context, userID uuid.UUID, limit, offset int) ([]domain.SecurityEvent, int, error)
 	UpdateUserFunc         func(ctx context.Context, user *domain.User) error
 }
 
@@ -50,6 +51,13 @@ func (m *MockUserRepository) ListSolvedProblems(ctx context.Context, userID uuid
 		return m.ListSolvedProblemsFunc(ctx, userID)
 	}
 	return []domain.PublicSolvedProblem{}, nil
+}
+
+func (m *MockUserRepository) GetUserSecurityEvents(ctx context.Context, userID uuid.UUID, limit, offset int) ([]domain.SecurityEvent, int, error) {
+	if m.GetSecurityEventsFunc != nil {
+		return m.GetSecurityEventsFunc(ctx, userID, limit, offset)
+	}
+	return []domain.SecurityEvent{}, 0, nil
 }
 
 func (m *MockUserRepository) UpdateUser(ctx context.Context, user *domain.User) error {

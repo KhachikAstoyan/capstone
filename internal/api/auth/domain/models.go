@@ -142,5 +142,6 @@ type SecurityEvent struct {
 	Category     string          `json:"category"`
 	Severity     string          `json:"severity"`
 	DetailJSON   json.RawMessage `json:"detail_json"`
+	SourceText   *string         `json:"source_text,omitempty"`
 	CreatedAt    time.Time       `json:"created_at"`
 }

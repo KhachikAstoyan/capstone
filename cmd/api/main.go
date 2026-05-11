@@ -14,6 +14,7 @@ import (
 
 	"github.com/KhachikAstoyan/capstone/internal/api"
 	aimodel "github.com/KhachikAstoyan/capstone/internal/api/ai"
+	aihttp "github.com/KhachikAstoyan/capstone/internal/api/ai/http"
 	airepo "github.com/KhachikAstoyan/capstone/internal/api/ai/repository"
 	aiservice "github.com/KhachikAstoyan/capstone/internal/api/ai/service"
 	"github.com/KhachikAstoyan/capstone/internal/api/auth"
@@ -124,6 +125,7 @@ func main() {
 	rbacService := rbacservice.NewService(roleRepo, permRepo, userRoleRepo)
 
 	emailVerificationPub := rabbitmq.NewNoopEmailVerificationPublisher()
+	jobPublisher := rabbitmq.NewNoopJobPublisher()
 	if cfg.RabbitMQURL != "" {
 		pub, err := rabbitmq.NewPublisher(cfg.RabbitMQURL, cfg.RabbitMQExchange)
 		if err != nil {
@@ -135,9 +137,11 @@ func main() {
 			}
 		}()
 		emailVerificationPub = rabbitmq.NewEmailVerificationPublisher(pub, cfg.RabbitMQEmailVerificationRoutingKey)
+		jobPublisher = rabbitmq.NewJobPublisher(pub, cfg.RabbitMQJobsRoutingKey)
 		log.Info("RabbitMQ publisher ready",
 			zap.String("exchange", cfg.RabbitMQExchange),
-			zap.String("email_verification_routing_key", cfg.RabbitMQEmailVerificationRoutingKey))
+			zap.String("email_verification_routing_key", cfg.RabbitMQEmailVerificationRoutingKey),
+			zap.String("jobs_routing_key", cfg.RabbitMQJobsRoutingKey))
 	}
 
 	authService := authservice.NewService(userRepo, identityRepo, refreshTokenRepo, emailVerificationRepo, statsRepo, jwtManager, rbacService, cfg.FrontendURL, emailVerificationPub)
@@ -175,11 +179,12 @@ func main() {
 		aiModel = anthropic.NewLanguageModel(cfg.AIModel)
 	}
 	aiSvc := aiservice.New(aiRepo, aiModel, log)
+	aiHandler := aihttp.New(aiSvc, problemsService)
 
-	submissionsService := submissionsservice.NewService(submissionsRepo, cpClient, problemsRepo, aiSvc)
+	submissionsService := submissionsservice.NewService(submissionsRepo, cpClient, jobPublisher, problemsRepo, aiSvc)
 	submissionsHandler := submissionshttp.NewHandler(submissionsService, rbacManager)
 
-	handler := setupRoutes(authHandler, rbacHandler, problemsHandler, tagsHandler, languagesHandler, submissionsHandler, jwtManager, rbacManager)
+	handler := setupRoutes(authHandler, rbacHandler, problemsHandler, tagsHandler, languagesHandler, submissionsHandler, aiHandler, jwtManager, rbacManager)
 
 	r := chi.NewRouter()
 

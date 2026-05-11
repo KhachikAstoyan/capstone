@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { LogOut, Shield, User as UserIcon, BarChart3 } from "lucide-react";
+import { LogOut, Shield, User as UserIcon, BarChart3, BookOpen, Users } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { canManageProblems, getMyPermissions } from "@/lib/permissions";
 import { Button } from "@/components/ui/button";
@@ -87,16 +87,36 @@ export default function Header() {
           {/* User area */}
           <div className="ml-auto flex items-center gap-1">
             {showAdminNav && (
-              <Button variant="ghost" size="sm" asChild>
-                <Link
-                  to="/admin/problems"
-                  search={{ page: 1, q: undefined, visibility: undefined }}
-                  className="flex items-center gap-1.5 no-underline"
-                >
-                  <Shield className="h-4 w-4" />
-                  Admin
-                </Link>
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" className="flex items-center gap-1.5">
+                    <Shield className="h-4 w-4" />
+                    Admin
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-44">
+                  <DropdownMenuItem asChild>
+                    <Link
+                      to="/admin/problems"
+                      search={{ page: 1, q: undefined, visibility: undefined }}
+                      className="flex cursor-pointer items-center gap-2"
+                    >
+                      <BookOpen className="h-4 w-4" />
+                      Problems
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link
+                      to="/admin/users"
+                      search={{ page: 1, q: undefined, sort: undefined }}
+                      className="flex cursor-pointer items-center gap-2"
+                    >
+                      <Users className="h-4 w-4" />
+                      Users
+                    </Link>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             )}
             <ThemeToggle />
             {loading ? (
