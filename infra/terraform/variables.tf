@@ -34,15 +34,15 @@ variable "image_tag" {
 }
 
 variable "frontend_url" {
-  description = "Frontend origin. Use the Firebase Hosting default URL after the first frontend deploy."
+  description = "Frontend origin (where the SPA is served). Used for API redirects/links."
   type        = string
-  default     = "https://CHANGE_ME.web.app"
+  default     = "http://localhost:5173"
 }
 
 variable "allowed_origins" {
   description = "Comma-separated CORS origins for the API."
   type        = string
-  default     = "https://CHANGE_ME.web.app"
+  default     = "http://localhost:5173"
 }
 
 variable "api_ai_provider" {
@@ -110,7 +110,7 @@ variable "api_max_instances" {
 }
 
 variable "control_plane_min_instances" {
-  description = "Minimum control-plane Cloud Run instances."
+  description = "Minimum control-plane Cloud Run instances. Must be >= 1: CP consumes RabbitMQ jobs.create queue, scale-to-zero would stop consumption."
   type        = number
   default     = 1
 }
@@ -130,7 +130,7 @@ variable "email_worker_instances" {
 variable "worker_machine_type" {
   description = "Compute Engine machine type for the execution worker."
   type        = string
-  default     = "e2-standard-2"
+  default     = "e2-small"
 }
 
 variable "worker_artifact_uri" {

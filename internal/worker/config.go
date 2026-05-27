@@ -41,7 +41,7 @@ type Config struct {
 	HeartbeatIntervalSec int `envconfig:"WORKER_HEARTBEAT_INTERVAL_SEC" default:"10"`
 
 	// How often the worker polls for new jobs when it has free capacity.
-	PollIntervalSec int `envconfig:"WORKER_POLL_INTERVAL_SEC" default:"2"`
+	PollIntervalMs int `envconfig:"WORKER_POLL_INTERVAL_MS" default:"100"`
 
 	// How often the worker renews a lease while executing a job.
 	LeaseRenewalIntervalSec int `envconfig:"WORKER_LEASE_RENEWAL_INTERVAL_SEC" default:"20"`
@@ -117,7 +117,7 @@ func (c *Config) HeartbeatInterval() time.Duration {
 }
 
 func (c *Config) PollInterval() time.Duration {
-	return time.Duration(c.PollIntervalSec) * time.Second
+	return time.Duration(c.PollIntervalMs) * time.Millisecond
 }
 
 func (c *Config) LeaseRenewalInterval() time.Duration {

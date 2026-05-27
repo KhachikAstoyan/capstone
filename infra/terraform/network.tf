@@ -31,17 +31,6 @@ resource "google_compute_router_nat" "main" {
   }
 }
 
-resource "google_vpc_access_connector" "run" {
-  name          = "${local.name_prefix}-run"
-  region        = var.region
-  network       = google_compute_network.main.name
-  ip_cidr_range = "10.20.1.0/28"
-  min_instances = 2
-  max_instances = 3
-
-  depends_on = [google_project_service.required]
-}
-
 resource "google_compute_firewall" "rabbitmq_internal" {
   name    = "${local.name_prefix}-rabbitmq-internal"
   network = google_compute_network.main.name
@@ -52,8 +41,7 @@ resource "google_compute_firewall" "rabbitmq_internal" {
   }
 
   source_ranges = [
-    google_compute_subnetwork.main.ip_cidr_range,
-    google_vpc_access_connector.run.ip_cidr_range
+    google_compute_subnetwork.main.ip_cidr_range
   ]
 
   target_tags = ["${local.name_prefix}-rabbitmq"]

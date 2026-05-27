@@ -162,7 +162,7 @@ func NewDockerExecutor(languages map[string]LangConfig, runtime string, log *zap
 }
 
 // Execute implements Executor.
-func (e *DockerExecutor) Execute(ctx context.Context, a *domain.Assignment) (*ExecutionResult, error) {
+func (e *DockerExecutor) Execute(ctx context.Context, a *domain.Assignment) (res *ExecutionResult, err error) {
 	log := e.log.With(
 		zap.String("job_id", a.JobID.String()),
 		zap.String("submission_id", a.SubmissionID.String()),
@@ -172,6 +172,18 @@ func (e *DockerExecutor) Execute(ctx context.Context, a *domain.Assignment) (*Ex
 		zap.Int("memory_limit_mb", a.MemoryLimitMb),
 	)
 	log.Info("docker executor received job")
+
+	// Wall time covers the whole backend cost: workspace build, container
+	// create/run, and output parse — i.e. how long the worker actually spent
+	// on this job, independent of any UI-side polling.
+	start := time.Now()
+	defer func() {
+		if res != nil {
+			ms := int(time.Since(start).Milliseconds())
+			res.WallTimeMs = &ms
+			log.Info("docker job wall time", zap.Int("wall_time_ms", ms))
+		}
+	}()
 
 	lang, ok := e.languages[a.Language]
 	if !ok {
@@ -423,6 +435,7 @@ func (e *DockerExecutor) parseResults(_ *domain.Assignment, output string) (*Exe
 		compilerOutput *string
 	)
 
+	var escapeMatch string
 	for _, r := range raw {
 		if r.Verdict != "Accepted" {
 			allAccepted = false
@@ -433,6 +446,10 @@ func (e *DockerExecutor) parseResults(_ *domain.Assignment, output string) (*Exe
 					compilerOutput = &s
 				}
 			}
+		}
+		// Check stderr for runtime sandbox escape attempts regardless of verdict.
+		if escapeMatch == "" && r.Stderr != "" {
+			escapeMatch = detectEscapeAttempt(r.Stderr)
 		}
 		totalTimeMs += r.TimeMs
 		timeMs := r.TimeMs
@@ -448,6 +465,15 @@ func (e *DockerExecutor) parseResults(_ *domain.Assignment, output string) (*Exe
 		tcResults = append(tcResults, entry)
 	}
 	_ = allAccepted
+
+	if escapeMatch != "" {
+		detail := "sandbox escape attempt detected: " + escapeMatch
+		return &ExecutionResult{
+			OverallVerdict:  "SandboxViolation",
+			CompilerOutput:  &detail,
+			TestcaseResults: tcResults,
+		}, nil
+	}
 
 	return &ExecutionResult{
 		OverallVerdict:  overallVerdict,

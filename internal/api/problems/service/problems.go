@@ -30,6 +30,7 @@ type Service interface {
 	DeleteProblem(ctx context.Context, id uuid.UUID) error
 
 	ListTestCases(ctx context.Context, problemID uuid.UUID) ([]*domain.TestCase, error)
+	ListPublicTestCases(ctx context.Context, problemID uuid.UUID) ([]*domain.TestCase, error)
 	CreateTestCase(ctx context.Context, problemID uuid.UUID, req domain.CreateTestCaseRequest) (*domain.TestCase, error)
 	UpdateTestCase(ctx context.Context, id uuid.UUID, req domain.UpdateTestCaseRequest) (*domain.TestCase, error)
 	DeleteTestCase(ctx context.Context, id uuid.UUID) error
@@ -189,6 +190,10 @@ func (s *service) DeleteProblem(ctx context.Context, id uuid.UUID) error {
 
 func (s *service) ListTestCases(ctx context.Context, problemID uuid.UUID) ([]*domain.TestCase, error) {
 	return s.repo.ListTestCases(ctx, problemID)
+}
+
+func (s *service) ListPublicTestCases(ctx context.Context, problemID uuid.UUID) ([]*domain.TestCase, error) {
+	return s.repo.ListPublicTestCases(ctx, problemID)
 }
 
 func (s *service) CreateTestCase(ctx context.Context, problemID uuid.UUID, req domain.CreateTestCaseRequest) (*domain.TestCase, error) {

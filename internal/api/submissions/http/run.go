@@ -36,6 +36,8 @@ func (h *Handler) Run(w http.ResponseWriter, r *http.Request) {
 	sub, err := h.service.Run(r.Context(), userID, problemID, req)
 	if err != nil {
 		switch {
+		case errors.Is(err, service.ErrExecutionSuspended):
+			common.RespondError(w, http.StatusTooManyRequests, err, err.Error())
 		case errors.Is(err, service.ErrInvalidInput):
 			common.RespondError(w, http.StatusBadRequest, err, "invalid input")
 		case errors.Is(err, service.ErrProblemNotFound):

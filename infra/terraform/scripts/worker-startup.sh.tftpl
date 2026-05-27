@@ -21,10 +21,10 @@ apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin do
 systemctl enable --now docker
 
 if [[ "${enable_gvisor}" == "true" ]]; then
-  release="$(date +%Y%m%d)"
   tmp_dir="$(mktemp -d)"
-  curl -fsSL -o "$tmp_dir/runsc" "https://storage.googleapis.com/gvisor/releases/release-$release/x86_64/runsc"
-  curl -fsSL -o "$tmp_dir/runsc.sha512" "https://storage.googleapis.com/gvisor/releases/release-$release/x86_64/runsc.sha512"
+  base="https://storage.googleapis.com/gvisor/releases/release/latest/x86_64"
+  curl -fsSL -o "$tmp_dir/runsc" "$base/runsc"
+  curl -fsSL -o "$tmp_dir/runsc.sha512" "$base/runsc.sha512"
   (cd "$tmp_dir" && sha512sum -c runsc.sha512)
   install -m 0755 "$tmp_dir/runsc" /usr/local/bin/runsc
   mkdir -p /etc/docker

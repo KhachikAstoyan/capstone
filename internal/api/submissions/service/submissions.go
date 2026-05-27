@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	aidomain "github.com/KhachikAstoyan/capstone/internal/api/ai/domain"
 	problemsdomain "github.com/KhachikAstoyan/capstone/internal/api/problems/domain"
@@ -21,14 +22,20 @@ type JobPublisher interface {
 	PublishJobCreation(ctx context.Context, req cpdomain.CreateJobRequest) error
 }
 
+const (
+	violationWindow    = 10 * time.Minute
+	violationThreshold = 3
+)
+
 var (
-	ErrForbidden          = errors.New("access denied")
-	ErrNoTestCases        = errors.New("problem has no active test cases")
-	ErrInvalidInput       = errors.New("invalid input")
-	ErrProblemNotFound    = errors.New("problem not found")
-	ErrSubmissionNotFound = repository.ErrSubmissionNotFound
-	ErrLanguageNotAllowed = repository.ErrLanguageNotAllowed
-	ErrLanguageNotFound   = repository.ErrLanguageNotFound
+	ErrForbidden           = errors.New("access denied")
+	ErrNoTestCases         = errors.New("problem has no active test cases")
+	ErrInvalidInput        = errors.New("invalid input")
+	ErrProblemNotFound     = errors.New("problem not found")
+	ErrSubmissionNotFound  = repository.ErrSubmissionNotFound
+	ErrLanguageNotAllowed  = repository.ErrLanguageNotAllowed
+	ErrLanguageNotFound    = repository.ErrLanguageNotFound
+	ErrExecutionSuspended  = errors.New("execution temporarily suspended due to repeated security violations")
 )
 
 // ProblemsReader is a minimal interface satisfied by the problems repository.
@@ -72,6 +79,12 @@ func (s *service) Run(ctx context.Context, userID, problemID uuid.UUID, req doma
 func (s *service) create(ctx context.Context, userID, problemID uuid.UUID, req domain.CreateSubmissionRequest, kind domain.SubmissionKind) (*domain.Submission, error) {
 	if strings.TrimSpace(req.SourceText) == "" || strings.TrimSpace(req.LanguageKey) == "" {
 		return nil, ErrInvalidInput
+	}
+
+	// Suspend execution for users with repeated security violations.
+	count, _ := s.repo.CountRecentSecurityEvents(ctx, userID, time.Now().Add(-violationWindow))
+	if count >= violationThreshold {
+		return nil, ErrExecutionSuspended
 	}
 
 	langID, langKey, err := s.repo.ResolveLanguage(ctx, req.LanguageKey)
@@ -228,6 +241,14 @@ func (s *service) GetSubmission(ctx context.Context, id, callerUserID uuid.UUID,
 		result := cpResultToSubmissionResult(sub.ID, jobResult)
 		finalStatus := verdictToStatus(jobResult.OverallVerdict)
 
+		if jobResult.OverallVerdict == "SandboxViolation" {
+			detail := map[string]interface{}{"verdict": "SandboxViolation"}
+			if jobResult.CompilerOutput != nil {
+				detail["detail"] = *jobResult.CompilerOutput
+			}
+			_ = s.repo.LogSecurityEvent(ctx, sub.ID, repository.SecurityCategorySandboxEscape, "block", detail)
+		}
+
 		_ = s.repo.SaveResult(ctx, result, finalStatus)
 		sub.Status = finalStatus
 		s.enrichResult(ctx, sub.ProblemID, &result)
@@ -286,6 +307,8 @@ func verdictToStatus(verdict string) domain.SubmissionStatus {
 		return domain.StatusRuntimeError
 	case "CompilationError":
 		return domain.StatusCompilationError
+	case "SandboxViolation":
+		return domain.StatusBlocked
 	default:
 		return domain.StatusInternalError
 	}

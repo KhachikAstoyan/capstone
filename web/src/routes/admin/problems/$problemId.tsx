@@ -12,6 +12,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -653,15 +659,32 @@ function TestCasesTab({
         )}
       </div>
 
-      {showForm && (
-        <TestCaseForm
-          problem={problem}
-          testCase={editingTc}
-          totalCount={testCases.length}
-          onSaved={onSaved}
-          onCancel={() => { setShowForm(false); setEditingTc(null); }}
-        />
-      )}
+      <Dialog
+        open={showForm}
+        onOpenChange={(open) => {
+          if (!open) {
+            setShowForm(false);
+            setEditingTc(null);
+          }
+        }}
+      >
+        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>
+              {editingTc ? "Edit test case" : "Add test case"}
+            </DialogTitle>
+          </DialogHeader>
+          {showForm && (
+            <TestCaseForm
+              problem={problem}
+              testCase={editingTc}
+              totalCount={testCases.length}
+              onSaved={onSaved}
+              onCancel={() => { setShowForm(false); setEditingTc(null); }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -803,15 +826,7 @@ function TestCaseForm({
   }
 
   return (
-    <div className="rounded-lg border border-border bg-card p-4 grid gap-4">
-      <div className="flex items-center justify-between">
-        <h3 className="font-medium text-sm">{isEdit ? "Edit test case" : "Add test case"}</h3>
-        <Button type="button" variant="ghost" size="icon" onClick={onCancel}>
-          <X className="h-4 w-4" />
-        </Button>
-      </div>
-
-      <form onSubmit={handleSubmit} className="grid gap-4">
+    <form onSubmit={handleSubmit} className="grid gap-4">
         {spec ? (
           // Function-call mode
           <>
@@ -927,7 +942,6 @@ function TestCaseForm({
           </Button>
         </div>
       </form>
-    </div>
   );
 }
 

@@ -142,14 +142,20 @@ func main() {
 	r.Use(chimiddleware.Logger)
 	r.Use(chimiddleware.Recoverer)
 
-	// Shared-secret authentication for all routes.
-	if cfg.InternalKey != "" {
-		r.Use(internalKeyMiddleware(cfg.InternalKey))
-	} else {
-		log.Warn("CP_INTERNAL_KEY is not set — authentication is DISABLED (development mode)")
-	}
+	r.Get("/healthz", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("ok"))
+	})
 
-	r.Mount("/", setupRoutes(handler))
+	r.Group(func(r chi.Router) {
+		if cfg.InternalKey != "" {
+			r.Use(internalKeyMiddleware(cfg.InternalKey))
+		} else {
+			log.Warn("CP_INTERNAL_KEY is not set — authentication is DISABLED (development mode)")
+		}
+
+		r.Mount("/", setupRoutes(handler))
+	})
 
 	server := &http.Server{
 		Addr:    fmt.Sprintf("%s:%d", cfg.ServerHost, cfg.ServerPort),

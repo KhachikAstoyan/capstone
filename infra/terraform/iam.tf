@@ -35,10 +35,10 @@ resource "google_project_iam_member" "worker_artifact_reader" {
   member  = "serviceAccount:${google_service_account.worker.email}"
 }
 
-resource "google_project_iam_member" "worker_storage_viewer" {
-  project = var.project_id
-  role    = "roles/storage.objectViewer"
-  member  = "serviceAccount:${google_service_account.worker.email}"
+resource "google_storage_bucket_iam_member" "worker_artifact_bucket_viewer" {
+  bucket = "${var.project_id}-worker-artifacts"
+  role   = "roles/storage.objectViewer"
+  member = "serviceAccount:${google_service_account.worker.email}"
 }
 
 locals {
@@ -57,7 +57,8 @@ locals {
       service_account = google_service_account.control_plane.email
       secrets = [
         "cp-database-url",
-        "control-plane-key"
+        "control-plane-key",
+        "rabbitmq-url"
       ]
     }
     email = {

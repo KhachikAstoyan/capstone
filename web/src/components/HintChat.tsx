@@ -5,6 +5,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { ApiError } from '@/lib/api'
 import { getHintHistory, sendHint, type ChatMessage } from '@/lib/hints'
+import { HintMarkdown } from '@/components/HintMarkdown'
 
 interface HintChatProps {
   problemId: string
@@ -109,13 +110,17 @@ export function HintChat({ problemId, code, languageKey }: HintChatProps) {
               }
             >
               <div
-                className={`max-w-[85%] rounded-lg px-3 py-2 text-xs leading-relaxed whitespace-pre-wrap ${
+                className={`max-w-[85%] rounded-lg px-3 py-2 text-xs leading-relaxed ${
                   msg.role === 'user'
-                    ? 'bg-primary text-primary-foreground'
+                    ? 'bg-primary text-primary-foreground whitespace-pre-wrap'
                     : 'bg-muted text-foreground'
                 }`}
               >
-                {msg.content}
+                {msg.role === 'user' ? (
+                  msg.content
+                ) : (
+                  <HintMarkdown content={msg.content} />
+                )}
               </div>
             </div>
           ))}
@@ -147,7 +152,7 @@ export function HintChat({ problemId, code, languageKey }: HintChatProps) {
           />
           <Button
             size="icon"
-            className="h-auto w-9 shrink-0 self-end"
+            className="size-9 shrink-0 self-end"
             onClick={() => void handleSend()}
             disabled={loading || initialLoading || !input.trim()}
           >

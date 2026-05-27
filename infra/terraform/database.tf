@@ -10,6 +10,7 @@ resource "google_sql_database_instance" "postgres" {
 
   settings {
     tier              = var.cloud_sql_tier
+    edition           = "ENTERPRISE"
     availability_type = "ZONAL"
     disk_size         = var.cloud_sql_disk_size_gb
     disk_type         = "PD_SSD"
@@ -21,11 +22,11 @@ resource "google_sql_database_instance" "postgres" {
 
     backup_configuration {
       enabled                        = true
-      point_in_time_recovery_enabled = true
+      point_in_time_recovery_enabled = false
     }
   }
 
-  deletion_protection = true
+  deletion_protection = false
 
   depends_on = [
     google_project_service.required,

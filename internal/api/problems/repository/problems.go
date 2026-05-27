@@ -39,6 +39,7 @@ type Repository interface {
 	GetProblemTags(ctx context.Context, problemIDs []uuid.UUID) (map[uuid.UUID][]string, error)
 
 	ListTestCases(ctx context.Context, problemID uuid.UUID) ([]*domain.TestCase, error)
+	ListPublicTestCases(ctx context.Context, problemID uuid.UUID) ([]*domain.TestCase, error)
 	CreateTestCase(ctx context.Context, problemID uuid.UUID, req domain.CreateTestCaseRequest) (*domain.TestCase, error)
 	UpdateTestCase(ctx context.Context, id uuid.UUID, req domain.UpdateTestCaseRequest) (*domain.TestCase, error)
 	DeleteTestCase(ctx context.Context, id uuid.UUID) error

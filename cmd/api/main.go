@@ -169,7 +169,7 @@ func main() {
 	case "openai":
 		if cfg.AIAPIBaseURL != "" {
 			log.Info("using ollama with openai provider", zap.String("base_url", cfg.AIAPIBaseURL))
-			aiModel = aimodel.NewOllamaModel(cfg.AIAPIBaseURL, cfg.AIModel)
+			aiModel = aimodel.NewOllamaModel(cfg.AIAPIBaseURL, cfg.AIModel, cfg.AIAPIKey)
 		} else {
 			aiModel = openai.NewLanguageModel(cfg.AIModel)
 		}

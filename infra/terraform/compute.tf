@@ -65,7 +65,7 @@ resource "google_compute_instance" "worker" {
   depends_on = [
     google_cloud_run_v2_service.control_plane,
     google_project_iam_member.worker_artifact_reader,
-    google_project_iam_member.worker_storage_viewer,
+    google_storage_bucket_iam_member.worker_artifact_bucket_viewer,
     google_secret_manager_secret_iam_member.access
   ]
 }

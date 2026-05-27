@@ -200,6 +200,13 @@ func (s *Service) parseValidationResponse(data map[string]interface{}) domain.Va
 		resp.Reason = reason
 	}
 
+	// The AI nests violations/safe_features under a "details" key. Surface that
+	// object directly so the frontend can read details.violations. Fall back to
+	// the whole payload when the model omits the key.
+	if details, ok := data["details"].(map[string]interface{}); ok {
+		resp.Details = details
+	}
+
 	return resp
 }
 
@@ -229,13 +236,26 @@ STRICT RULES:
 You will be given the problem statement and the user's current code before the conversation history.`
 
 func (s *Service) GetHint(ctx context.Context, req domain.HintRequest) (*domain.HintResponse, error) {
+	log := s.log.With(
+		zap.String("user_id", req.UserID.String()),
+		zap.String("problem_id", req.ProblemID.String()),
+		zap.String("language", req.LanguageKey),
+	)
+	log.Info("hint generation started",
+		zap.Int("message_len", len(req.Message)),
+		zap.Int("code_len", len(req.Code)),
+		zap.Int("problem_statement_len", len(req.ProblemStatement)))
+
 	history, err := s.repo.GetHintHistory(ctx, req.UserID, req.ProblemID)
 	if err != nil {
+		log.Error("failed to load hint history", zap.Error(err))
 		return nil, fmt.Errorf("load hint history: %w", err)
 	}
+	log.Debug("hint history loaded", zap.Int("history_messages", len(history)))
 
 	userMsg, err := s.repo.SaveHintMessage(ctx, req.UserID, req.ProblemID, domain.ChatRoleUser, req.Message)
 	if err != nil {
+		log.Error("failed to save user hint message", zap.Error(err))
 		return nil, fmt.Errorf("save user hint message: %w", err)
 	}
 
@@ -265,8 +285,10 @@ func (s *Service) GetHint(ctx context.Context, req domain.HintRequest) (*domain.
 		Content: []aiapi.ContentBlock{&aiapi.TextBlock{Text: req.Message}},
 	})
 
+	log.Debug("calling AI for hint", zap.Int("total_messages", len(messages)))
 	resp, err := ai.GenerateText(ctx, messages, ai.WithModel(s.model), ai.WithMaxOutputTokens(512))
 	if err != nil {
+		log.Error("hint AI call failed", zap.Error(err))
 		return nil, fmt.Errorf("hint AI call: %w", err)
 	}
 
@@ -276,12 +298,23 @@ func (s *Service) GetHint(ctx context.Context, req domain.HintRequest) (*domain.
 			text = tb.Text
 		}
 	}
+	if text == "" {
+		log.Warn("hint AI returned empty text",
+			zap.Int("content_blocks", len(resp.Content)),
+			zap.Int("output_tokens", resp.Usage.OutputTokens))
+	} else {
+		log.Debug("hint AI response received",
+			zap.Int("hint_len", len(text)),
+			zap.Int("output_tokens", resp.Usage.OutputTokens))
+	}
 
 	assistantMsg, err := s.repo.SaveHintMessage(ctx, req.UserID, req.ProblemID, domain.ChatRoleAssistant, text)
 	if err != nil {
+		log.Error("failed to save assistant hint message", zap.Error(err))
 		return nil, fmt.Errorf("save assistant hint message: %w", err)
 	}
 
+	log.Info("hint generation completed", zap.Int("hint_len", len(text)))
 	return &domain.HintResponse{
 		UserMessage:      *userMsg,
 		AssistantMessage: *assistantMsg,

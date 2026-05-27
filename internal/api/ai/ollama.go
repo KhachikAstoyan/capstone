@@ -14,13 +14,15 @@ import (
 type OllamaModel struct {
 	baseURL    string
 	modelID    string
+	apiKey     string
 	httpClient *http.Client
 }
 
-func NewOllamaModel(baseURL, modelID string) *OllamaModel {
+func NewOllamaModel(baseURL, modelID, apiKey string) *OllamaModel {
 	return &OllamaModel{
 		baseURL:    baseURL,
 		modelID:    modelID,
+		apiKey:     apiKey,
 		httpClient: &http.Client{},
 	}
 }
@@ -49,6 +51,9 @@ func (m *OllamaModel) Generate(ctx context.Context, messages []aiapi.Message, op
 		return nil, fmt.Errorf("create request: %w", err)
 	}
 	httpReq.Header.Set("Content-Type", "application/json")
+	if m.apiKey != "" {
+		httpReq.Header.Set("Authorization", "Bearer "+m.apiKey)
+	}
 
 	resp, err := m.httpClient.Do(httpReq)
 	if err != nil {
@@ -131,18 +136,18 @@ func (m *OllamaModel) buildRequest(messages []aiapi.Message, opts aiapi.CallOpti
 	}
 
 	return ollamaChatRequest{
-		Model:      m.modelID,
-		Messages:   msgs,
-		Stream:     false,
-		NumPredict: maxTokens,
+		Model:     m.modelID,
+		Messages:  msgs,
+		Stream:    false,
+		MaxTokens: maxTokens,
 	}
 }
 
 type ollamaChatRequest struct {
-	Model      string          `json:"model"`
-	Messages   []ollamaMessage `json:"messages"`
-	Stream     bool            `json:"stream"`
-	NumPredict int             `json:"num_predict"`
+	Model     string          `json:"model"`
+	Messages  []ollamaMessage `json:"messages"`
+	Stream    bool            `json:"stream"`
+	MaxTokens int             `json:"max_completion_tokens"`
 }
 
 type ollamaMessage struct {

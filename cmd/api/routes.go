@@ -39,11 +39,14 @@ func setupRoutes(
 	r.Route("/api/v1", func(r chi.Router) {
 		// Auth routes
 		r.Route("/auth", func(r chi.Router) {
-			r.Post("/register", authHandler.Register)
-			r.Post("/login", authHandler.Login)
-			r.Post("/refresh", authHandler.RefreshToken)
+			// Pre-auth endpoints have no authenticated identity, so they are
+			// rate-limited by client IP to blunt credential stuffing, account
+			// spam, and verification-token guessing.
+			r.With(apimiddleware.IPRateLimit(5, 60*time.Second)).Post("/register", authHandler.Register)
+			r.With(apimiddleware.IPRateLimit(10, 60*time.Second)).Post("/login", authHandler.Login)
+			r.With(apimiddleware.IPRateLimit(20, 60*time.Second)).Post("/refresh", authHandler.RefreshToken)
 			r.Post("/logout", authHandler.Logout)
-			r.Post("/verify-email", authHandler.VerifyEmail)
+			r.With(apimiddleware.IPRateLimit(10, 60*time.Second)).Post("/verify-email", authHandler.VerifyEmail)
 
 			r.Group(func(r chi.Router) {
 				r.Use(authhttp.AuthMiddleware(jwtManager))
@@ -142,6 +145,7 @@ func setupRoutes(
 			r.Get("/{id}", problemsHandler.GetProblem)
 			r.Get("/{id}/tags", tagsHandler.GetProblemTags)
 			r.Get("/{id}/languages", languagesHandler.GetProblemLanguages)
+			r.Get("/{id}/test-cases", problemsHandler.ListPublicTestCases)
 		})
 
 		// Public tags routes

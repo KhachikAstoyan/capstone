@@ -2,7 +2,9 @@ package middleware
 
 import (
 	"encoding/json"
+	"net"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -77,16 +79,59 @@ func SubmissionRateLimit(limit int, window time.Duration) func(http.Handler) htt
 			sw := val.(*slidingWindow)
 
 			if !sw.allow(limit, window) {
-				w.Header().Set("Content-Type", "application/json")
-				w.Header().Set("Retry-After", window.String())
-				w.WriteHeader(http.StatusTooManyRequests)
-				_ = json.NewEncoder(w).Encode(map[string]string{
-					"error": "rate limit exceeded, please slow down",
-				})
+				writeRateLimited(w, window)
 				return
 			}
 
 			next.ServeHTTP(w, r)
 		})
 	}
+}
+
+// IPRateLimit returns middleware that limits requests by client IP address,
+// independent of authentication. It is intended for pre-auth endpoints
+// (login, register, refresh, email verification) that no per-user limiter
+// can protect, since those requests have no authenticated identity.
+func IPRateLimit(limit int, window time.Duration) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			key := "ip:" + clientIP(r) + ":" + r.URL.Path
+
+			val, _ := windows.LoadOrStore(key, &slidingWindow{})
+			sw := val.(*slidingWindow)
+
+			if !sw.allow(limit, window) {
+				writeRateLimited(w, window)
+				return
+			}
+
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
+// writeRateLimited emits the standard 429 response.
+func writeRateLimited(w http.ResponseWriter, window time.Duration) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Retry-After", window.String())
+	w.WriteHeader(http.StatusTooManyRequests)
+	_ = json.NewEncoder(w).Encode(map[string]string{
+		"error": "rate limit exceeded, please slow down",
+	})
+}
+
+// clientIP extracts the originating client address. It honors the first
+// entry of X-Forwarded-For when present (the platform runs behind a reverse
+// proxy) and otherwise falls back to the transport-level remote address.
+func clientIP(r *http.Request) string {
+	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
+		if first, _, ok := strings.Cut(xff, ","); ok {
+			return strings.TrimSpace(first)
+		}
+		return strings.TrimSpace(xff)
+	}
+	if host, _, err := net.SplitHostPort(r.RemoteAddr); err == nil {
+		return host
+	}
+	return r.RemoteAddr
 }

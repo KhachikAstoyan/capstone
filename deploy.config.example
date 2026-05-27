@@ -1,0 +1,36 @@
+# ─── Required ────────────────────────────────────────────────────────────────
+GCP_PROJECT_ID=""           # your GCP project ID
+GCP_REGION="us-central1"
+GCP_ZONE="us-central1-a"
+
+# AI provider (anthropic or openai)
+AI_PROVIDER="anthropic"
+AI_MODEL="claude-opus-4-1"
+AI_API_KEY=""               # Anthropic or OpenAI key
+
+# SMTP (e.g. SendGrid: host=smtp.sendgrid.net, user=apikey, pass=SG.xxx)
+SMTP_HOST=""
+SMTP_PORT="587"
+SMTP_USERNAME=""
+SMTP_PASSWORD=""
+SMTP_FROM=""                # e.g. "Capstone <no-reply@yourdomain.com>"
+
+ADMIN_EMAIL=""              # account you'll register first — gets super_admin
+
+# Frontend URL — used for API CORS + redirect URLs.
+# Leave default for local dev. Set to your deployed frontend later and re-run deploy.sh.
+FRONTEND_URL="http://localhost:5173"
+ALLOWED_ORIGINS=""          # optional. comma-separated. defaults to FRONTEND_URL
+
+# ─── Optional ────────────────────────────────────────────────────────────────
+IMAGE_TAG="latest"
+ARTIFACT_REPOSITORY="capstone"
+WORKER_MACHINE_TYPE="e2-small"
+WORKER_LANGUAGES="python,javascript,go,java"
+WORKER_CAPACITY="1"
+WORKER_DOCKER_RUNTIME="runc"   # or runsc if enable_gvisor=true
+ENABLE_GVISOR="false"
+CLOUD_SQL_TIER="db-f1-micro"
+CLOUD_SQL_DISK_GB="20"
+API_MIN_INSTANCES="0"
+API_MAX_INSTANCES="3"

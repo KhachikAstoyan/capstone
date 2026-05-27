@@ -17,7 +17,3 @@ output "rabbitmq_internal_ip" {
 output "worker_instance_name" {
   value = google_compute_instance.worker.name
 }
-
-output "firebase_default_url_hint" {
-  value = "https://${var.project_id}.web.app"
-}

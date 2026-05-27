@@ -33,6 +33,28 @@ func (h *Handler) ListTestCases(w http.ResponseWriter, r *http.Request) {
 	common.RespondJSON(w, http.StatusOK, map[string]any{"test_cases": tcs})
 }
 
+// ListPublicTestCases serves only non-hidden test cases. Wired to a public
+// route — no admin permission required, hidden cases are filtered out in SQL.
+func (h *Handler) ListPublicTestCases(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		common.RespondSimpleError(w, http.StatusBadRequest, "invalid problem id")
+		return
+	}
+
+	tcs, err := h.service.ListPublicTestCases(r.Context(), id)
+	if err != nil {
+		common.RespondError(w, http.StatusInternalServerError, err, "failed to list test cases")
+		return
+	}
+
+	if tcs == nil {
+		tcs = []*domain.TestCase{}
+	}
+	common.RespondJSON(w, http.StatusOK, map[string]any{"test_cases": tcs})
+}
+
 func (h *Handler) CreateTestCase(w http.ResponseWriter, r *http.Request) {
 	idStr := chi.URLParam(r, "id")
 	id, err := uuid.Parse(idStr)

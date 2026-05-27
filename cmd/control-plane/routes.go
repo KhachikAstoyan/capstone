@@ -22,11 +22,6 @@ import (
 func setupRoutes(h *cphttp.Handler) http.Handler {
 	r := chi.NewRouter()
 
-	r.Get("/healthz", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte("ok"))
-	})
-
 	r.Route("/v1", func(r chi.Router) {
 
 		// ── Job endpoints (called by the main API service) ──────────────────

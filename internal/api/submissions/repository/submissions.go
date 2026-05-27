@@ -6,13 +6,15 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/KhachikAstoyan/capstone/internal/api/submissions/domain"
 	"github.com/google/uuid"
 )
 
 const (
-	SecurityCategoryCodeBlocked = "code_blocked"
+	SecurityCategoryCodeBlocked    = "code_blocked"
+	SecurityCategorySandboxEscape  = "sandbox_escape_attempt"
 )
 
 var (
@@ -33,6 +35,7 @@ type Repository interface {
 	IsLanguageAllowed(ctx context.Context, problemID, languageID uuid.UUID) (bool, error)
 	GetTestCasesForProblem(ctx context.Context, problemID uuid.UUID) ([]*domain.ProblemTestCase, error)
 	LogSecurityEvent(ctx context.Context, submissionID uuid.UUID, category, severity string, detail map[string]interface{}) error
+	CountRecentSecurityEvents(ctx context.Context, userID uuid.UUID, since time.Time) (int, error)
 }
 
 type repository struct {
@@ -251,6 +254,16 @@ func (r *repository) LogSecurityEvent(ctx context.Context, submissionID uuid.UUI
 		VALUES ($1, $2, $3::SECURITY_SEVERITY, $4)`
 	_, err = r.db.ExecContext(ctx, q, submissionID, category, severity, detailJSON)
 	return err
+}
+
+func (r *repository) CountRecentSecurityEvents(ctx context.Context, userID uuid.UUID, since time.Time) (int, error) {
+	const q = `
+		SELECT COUNT(*) FROM security_events se
+		JOIN submissions sub ON sub.id = se.submission_id
+		WHERE sub.user_id = $1 AND se.created_at > $2`
+	var count int
+	err := r.db.QueryRowContext(ctx, q, userID, since).Scan(&count)
+	return count, err
 }
 
 func (r *repository) GetTestCasesForProblem(ctx context.Context, problemID uuid.UUID) ([]*domain.ProblemTestCase, error) {

@@ -57,6 +57,37 @@ func (r *repository) ListTestCases(ctx context.Context, problemID uuid.UUID) ([]
 	return tcs, rows.Err()
 }
 
+// ListPublicTestCases returns only non-hidden, active test cases. Safe to expose
+// to unauthenticated users — hidden cases are never included.
+func (r *repository) ListPublicTestCases(ctx context.Context, problemID uuid.UUID) ([]*domain.TestCase, error) {
+	const q = `
+		SELECT id, problem_id, external_id, input_data, expected_data,
+		       order_index, is_active, is_hidden, created_at
+		FROM problem_test_cases
+		WHERE problem_id = $1 AND is_active = TRUE AND is_hidden = FALSE
+		ORDER BY order_index ASC`
+
+	rows, err := r.db.QueryContext(ctx, q, problemID)
+	if err != nil {
+		return nil, fmt.Errorf("list public test cases: %w", err)
+	}
+	defer rows.Close()
+
+	var tcs []*domain.TestCase
+	for rows.Next() {
+		tc := &domain.TestCase{}
+		if err := rows.Scan(
+			&tc.ID, &tc.ProblemID, &tc.ExternalID,
+			&tc.InputData, &tc.ExpectedData,
+			&tc.OrderIndex, &tc.IsActive, &tc.IsHidden, &tc.CreatedAt,
+		); err != nil {
+			return nil, fmt.Errorf("scan test case: %w", err)
+		}
+		tcs = append(tcs, tc)
+	}
+	return tcs, rows.Err()
+}
+
 func (r *repository) CreateTestCase(ctx context.Context, problemID uuid.UUID, req domain.CreateTestCaseRequest) (*domain.TestCase, error) {
 	const q = `
 		INSERT INTO problem_test_cases

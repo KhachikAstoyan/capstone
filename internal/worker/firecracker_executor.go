@@ -94,12 +94,24 @@ func NewFirecrackerExecutor(
 }
 
 // Execute implements Executor.
-func (e *FirecrackerExecutor) Execute(ctx context.Context, a *domain.Assignment) (*ExecutionResult, error) {
+func (e *FirecrackerExecutor) Execute(ctx context.Context, a *domain.Assignment) (res *ExecutionResult, err error) {
 	log := e.log.With(
 		zap.String("job_id", a.JobID.String()),
 		zap.String("language", a.Language),
 		zap.Int("test_cases", len(a.TestCases)),
 	)
+
+	// Wall time covers the whole backend cost: snapshot restore, agent
+	// handshake, in-VM execution, and output parse — i.e. how long the worker
+	// actually spent on this job, independent of any UI-side polling.
+	start := time.Now()
+	defer func() {
+		if res != nil {
+			ms := int(time.Since(start).Milliseconds())
+			res.WallTimeMs = &ms
+			log.Info("firecracker job wall time", zap.Int("wall_time_ms", ms))
+		}
+	}()
 
 	lang, ok := e.languages[a.Language]
 	if !ok {

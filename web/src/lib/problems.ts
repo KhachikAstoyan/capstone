@@ -198,6 +198,16 @@ export async function listTestCases(problemId: string): Promise<TestCase[]> {
   return res.test_cases ?? [];
 }
 
+/** Public, non-hidden test cases for a problem. No auth required. */
+export async function listPublicTestCases(
+  problemId: string,
+): Promise<TestCase[]> {
+  const res = await apiGet<{ test_cases: TestCase[] }>(
+    `/problems/${encodeURIComponent(problemId)}/test-cases`,
+  );
+  return res.test_cases ?? [];
+}
+
 export function createTestCase(
   problemId: string,
   req: CreateTestCaseRequest,

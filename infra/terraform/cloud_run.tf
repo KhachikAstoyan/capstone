@@ -1,8 +1,9 @@
 resource "google_cloud_run_v2_service" "control_plane" {
-  name     = "${local.name_prefix}-control-plane"
-  location = var.region
-  ingress  = "INGRESS_TRAFFIC_INTERNAL_ONLY"
-  labels   = local.common_labels
+  name                = "${local.name_prefix}-control-plane"
+  location            = var.region
+  ingress             = "INGRESS_TRAFFIC_INTERNAL_ONLY"
+  labels              = local.common_labels
+  deletion_protection = false
 
   template {
     service_account = google_service_account.control_plane.email
@@ -10,6 +11,14 @@ resource "google_cloud_run_v2_service" "control_plane" {
     scaling {
       min_instance_count = var.control_plane_min_instances
       max_instance_count = var.control_plane_max_instances
+    }
+
+    vpc_access {
+      network_interfaces {
+        network    = google_compute_network.main.id
+        subnetwork = google_compute_subnetwork.main.id
+      }
+      egress = "PRIVATE_RANGES_ONLY"
     }
 
     volumes {
@@ -52,6 +61,15 @@ resource "google_cloud_run_v2_service" "control_plane" {
           }
         }
       }
+      env {
+        name = "CP_RABBITMQ_URL"
+        value_source {
+          secret_key_ref {
+            secret  = google_secret_manager_secret.secrets["rabbitmq-url"].secret_id
+            version = "latest"
+          }
+        }
+      }
 
       volume_mounts {
         name       = "cloudsql"
@@ -83,15 +101,17 @@ resource "google_cloud_run_v2_service" "control_plane" {
     google_project_iam_member.cloud_sql_client,
     google_secret_manager_secret_iam_member.access,
     google_secret_manager_secret_version.cp_database_url,
-    google_secret_manager_secret_version.control_plane_key
+    google_secret_manager_secret_version.control_plane_key,
+    google_secret_manager_secret_version.rabbitmq_url
   ]
 }
 
 resource "google_cloud_run_v2_service" "api" {
-  name     = "${local.name_prefix}-api"
-  location = var.region
-  ingress  = "INGRESS_TRAFFIC_ALL"
-  labels   = local.common_labels
+  name                = "${local.name_prefix}-api"
+  location            = var.region
+  ingress             = "INGRESS_TRAFFIC_ALL"
+  labels              = local.common_labels
+  deletion_protection = false
 
   template {
     service_account = google_service_account.api.email
@@ -102,8 +122,11 @@ resource "google_cloud_run_v2_service" "api" {
     }
 
     vpc_access {
-      connector = google_vpc_access_connector.run.id
-      egress    = "PRIVATE_RANGES_ONLY"
+      network_interfaces {
+        network    = google_compute_network.main.id
+        subnetwork = google_compute_subnetwork.main.id
+      }
+      egress = "PRIVATE_RANGES_ONLY"
     }
 
     volumes {
@@ -152,9 +175,12 @@ resource "google_cloud_run_v2_service" "api" {
         name  = "AI_MODEL"
         value = var.api_ai_model
       }
-      env {
-        name  = "OPENAI_BASE_URL"
-        value = var.openai_base_url
+      dynamic "env" {
+        for_each = var.openai_base_url != "" ? [1] : []
+        content {
+          name  = "OPENAI_BASE_URL"
+          value = var.openai_base_url
+        }
       }
       env {
         name = "API_DATABASE_URL"
@@ -268,17 +294,21 @@ resource "google_cloud_run_v2_service_iam_member" "api_public_invoker" {
 resource "google_cloud_run_v2_worker_pool" "email" {
   provider = google-beta
 
-  name         = "${local.name_prefix}-email"
-  location     = var.region
-  launch_stage = "BETA"
-  labels       = local.common_labels
+  name                = "${local.name_prefix}-email"
+  location            = var.region
+  launch_stage        = "BETA"
+  labels              = local.common_labels
+  deletion_protection = false
 
   template {
     service_account = google_service_account.email.email
 
     vpc_access {
-      connector = google_vpc_access_connector.run.id
-      egress    = "PRIVATE_RANGES_ONLY"
+      network_interfaces {
+        network    = google_compute_network.main.id
+        subnetwork = google_compute_subnetwork.main.id
+      }
+      egress = "PRIVATE_RANGES_ONLY"
     }
 
     containers {
@@ -331,7 +361,7 @@ resource "google_cloud_run_v2_worker_pool" "email" {
       resources {
         limits = {
           cpu    = "1"
-          memory = "256Mi"
+          memory = "512Mi"
         }
       }
     }

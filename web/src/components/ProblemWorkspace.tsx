@@ -6,6 +6,7 @@ import {
   ChevronDown,
   Clock,
   Copy,
+  Eye,
   HardDrive,
   Loader2,
   Lock,
@@ -41,7 +42,13 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import type { FunctionSpec, ParamType, Problem } from "@/lib/problems";
+import {
+  listPublicTestCases,
+  type FunctionSpec,
+  type ParamType,
+  type Problem,
+  type TestCase,
+} from "@/lib/problems";
 import { ApiError } from "@/lib/api";
 import {
   getSubmission,
@@ -94,6 +101,12 @@ function formatVerdict(verdict: string | undefined): string {
     .replace(/^./, (c) => c.toUpperCase());
 }
 
+// Wall-clock elapsed time, submit click → terminal result.
+function formatDuration(ms: number): string {
+  if (ms < 1000) return `${Math.round(ms)} ms`;
+  return `${(ms / 1000).toFixed(1)} s`;
+}
+
 
 function prettyData(value: unknown): string {
   if (value === undefined || value === null) return "";
@@ -124,9 +137,9 @@ function DataBlock({
 }) {
   const colorClass =
     highlight === "ok"
-      ? "border-emerald-500/20 bg-emerald-500/5 text-emerald-400"
+      ? "border-emerald-500/45 bg-emerald-500/10 text-emerald-900 dark:text-emerald-200"
       : highlight === "err"
-        ? "border-rose-500/20 bg-rose-500/5 text-rose-400"
+        ? "border-rose-500/45 bg-rose-500/10 text-rose-900 dark:text-rose-200"
         : "border-border bg-muted/40 text-foreground";
   return (
     <div className="space-y-1">
@@ -139,6 +152,109 @@ function DataBlock({
         {value}
       </pre>
     </div>
+  );
+}
+
+/**
+ * Renders test-case input. `input_data` is an object keyed by parameter name
+ * (e.g. {"nums":[1,2], "target":9}); each parameter is shown on its own
+ * labeled row instead of as one raw JSON blob. Falls back to a single block
+ * for non-object inputs.
+ */
+function InputParams({ data }: { data: unknown }) {
+  if (data !== null && typeof data === "object" && !Array.isArray(data)) {
+    const entries = Object.entries(data as Record<string, unknown>);
+    if (entries.length > 0) {
+      return (
+        <div className="space-y-2.5">
+          {entries.map(([name, val]) => (
+            <DataBlock
+              key={name}
+              label={name}
+              value={prettyData(val)}
+              highlight="neutral"
+            />
+          ))}
+        </div>
+      );
+    }
+  }
+  return <DataBlock label="Input" value={prettyData(data)} highlight="neutral" />;
+}
+
+/**
+ * Test Cases tab — the problem's public (non-hidden) test cases with their
+ * input and expected output. Fetched from a public endpoint; hidden cases used
+ * for grading are filtered out server-side and never reach the client.
+ */
+function TestCasesTab({ problemId }: { problemId: string }) {
+  const [tests, setTests] = useState<TestCase[] | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    listPublicTestCases(problemId)
+      .then((t) => {
+        if (!cancelled) setTests(t);
+      })
+      .catch(() => {
+        if (!cancelled) setTests([]);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [problemId]);
+
+  return (
+    <ScrollArea className="flex-1">
+      <div className="space-y-4 p-4 sm:p-5">
+        <div className="flex items-start gap-2 rounded-md border border-border bg-muted/40 p-3">
+          <Eye className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
+          <p className="text-xs text-muted-foreground">
+            <span className="font-medium text-foreground">
+              Public test cases.
+            </span>{" "}
+            These are visible to everyone. Additional hidden cases are used for
+            grading but are not shown here.
+          </p>
+        </div>
+
+        {loading && (
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Loader2 className="size-3.5 animate-spin" />
+            Loading test cases…
+          </div>
+        )}
+
+        {!loading && tests && tests.length === 0 && (
+          <p className="text-xs text-muted-foreground">
+            This problem has no public test cases.
+          </p>
+        )}
+
+        {!loading &&
+          tests?.map((tc, i) => (
+            <div
+              key={tc.id}
+              className="space-y-2.5 rounded-md border border-border bg-muted/20 p-3"
+            >
+              <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                Test Case {i + 1}
+              </p>
+              <InputParams data={tc.input_data} />
+              <DataBlock
+                label="Expected Output"
+                value={prettyData(tc.expected_data)}
+                highlight="ok"
+              />
+            </div>
+          ))}
+      </div>
+    </ScrollArea>
   );
 }
 
@@ -502,6 +618,19 @@ function TestResultsPane({
             </TabsTrigger>
           </TabsList>
           <div className="flex items-center gap-2">
+            {/* Show the backend-measured wall time only once a result lands —
+                no live ticker while running. This is the real worker cost
+                (container/VM spin-up + execution + result collection). */}
+            {result?.wall_time_ms != null && (
+              <Badge
+                variant="outline"
+                className="shrink-0 gap-1 text-[10px] font-normal tabular-nums"
+                title="Backend execution time (container/VM + run + result collection)"
+              >
+                <Clock className="size-2.5" />
+                {formatDuration(result.wall_time_ms)}
+              </Badge>
+            )}
             {totalCount > 0 && (
               <Badge
                 variant="outline"
@@ -644,12 +773,13 @@ function TestResultsPane({
                         </p>
                       )}
                       {row.input_data !== undefined && (
-                        <DataBlock
-                          label="Input"
-                          value={prettyData(row.input_data)}
-                          highlight="neutral"
-                        />
+                        <InputParams data={row.input_data} />
                       )}
+                      {row.input_data !== undefined &&
+                        (row.expected_data !== undefined ||
+                          row.actual_output !== undefined) && (
+                          <div className="border-t border-border" />
+                        )}
                       {!accepted &&
                       row.expected_data !== undefined &&
                       row.actual_output !== undefined ? (
@@ -813,29 +943,32 @@ export function ProblemWorkspace({ problem }: { problem: Problem }) {
     setCode(starterCodeFor(problem, language));
   }
 
-  const pollSubmission = useCallback(async (submissionId: string) => {
-    try {
-      const nextSubmission = await getSubmission(submissionId);
-      setSubmission(nextSubmission);
+  const pollSubmission = useCallback(
+    async (submissionId: string) => {
+      try {
+        const nextSubmission = await getSubmission(submissionId);
+        setSubmission(nextSubmission);
 
-      if (isTerminalSubmissionStatus(nextSubmission.status)) {
+        if (isTerminalSubmissionStatus(nextSubmission.status)) {
+          setIsExecuting(false);
+          return;
+        }
+
+        pollTimeoutRef.current = window.setTimeout(() => {
+          void pollSubmission(submissionId);
+        }, 200);
+      } catch (err) {
         setIsExecuting(false);
-        return;
+        const message =
+          err instanceof ApiError
+            ? err.message
+            : "Failed to refresh execution status.";
+        setExecutionError(message);
+        toast.error(message);
       }
-
-      pollTimeoutRef.current = window.setTimeout(() => {
-        void pollSubmission(submissionId);
-      }, 300);
-    } catch (err) {
-      setIsExecuting(false);
-      const message =
-        err instanceof ApiError
-          ? err.message
-          : "Failed to refresh execution status.";
-      setExecutionError(message);
-      toast.error(message);
-    }
-  }, []);
+    },
+    [],
+  );
 
   async function handleExecute(kind: "run" | "submit") {
     const sourceText = code.trimEnd();
@@ -941,7 +1074,7 @@ export function ProblemWorkspace({ problem }: { problem: Problem }) {
               defaultValue="description"
               className="flex min-h-0 flex-1 flex-col gap-0"
             >
-              <div className="flex shrink-0 items-center border-b border-border bg-muted/40 px-4 py-0">
+              <div className="flex h-10 shrink-0 items-center border-b border-border bg-muted/40 px-4">
                 <TabsList
                   variant="line"
                   className="h-10 w-auto justify-start gap-5 bg-transparent p-0"
@@ -951,6 +1084,12 @@ export function ProblemWorkspace({ problem }: { problem: Problem }) {
                     className="px-0 text-xs font-medium"
                   >
                     Description
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="tests"
+                    className="px-0 text-xs font-medium"
+                  >
+                    Test Cases
                   </TabsTrigger>
                   <TabsTrigger
                     value="submissions"
@@ -978,6 +1117,13 @@ export function ProblemWorkspace({ problem }: { problem: Problem }) {
                     <StatementMarkdown source={problem.statement_markdown} />
                   </div>
                 </ScrollArea>
+              </TabsContent>
+
+              <TabsContent
+                value="tests"
+                className="mt-0 min-h-0 flex-1 overflow-auto p-0 data-[state=inactive]:hidden"
+              >
+                <TestCasesTab problemId={problem.id} />
               </TabsContent>
 
               <TabsContent
@@ -1017,7 +1163,7 @@ export function ProblemWorkspace({ problem }: { problem: Problem }) {
             <ResizablePanel defaultSize={58} minSize={32} className="min-h-0">
               <div className="flex h-full min-h-0 flex-col">
                 {/* toolbar */}
-                <div className="flex shrink-0 items-center gap-2 border-b border-border bg-muted/60 px-3 py-2">
+                <div className="flex h-10 shrink-0 items-center gap-2 border-b border-border bg-muted/40 px-4">
                   <Select value={language} onValueChange={handleLanguageChange}>
                     <SelectTrigger
                       size="sm"
